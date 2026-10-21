@@ -201,8 +201,8 @@ app.post("/api/farms", (req, res) => {
     // ========================================
     // 요청 데이터
     // ========================================
-
-    const { name, crop, area, latitude, longitude, address, pnu } = req.body;
+    const { name, crop, area, latitude, longitude, address, pnu, farm_uid } =
+      req.body;
 
     // ========================================
     // 농장 이름 검사
@@ -226,6 +226,15 @@ app.post("/api/farms", (req, res) => {
     const farmAddress = typeof address === "string" ? address.trim() : null;
 
     const farmPnu = typeof pnu === "string" ? pnu.trim() : null;
+
+    // ========================================
+    // 팜맵 농지 UID 처리
+    // ========================================
+
+    const farmUid =
+      farm_uid === null || farm_uid === undefined
+        ? null
+        : String(farm_uid).trim() || null;
 
     const farmArea =
       area === null || area === undefined || area === "" ? null : Number(area);
@@ -288,9 +297,10 @@ app.post("/api/farms", (req, res) => {
           latitude,
           longitude,
           address,
-          pnu
+          pnu,
+          farm_uid
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
       )
       .run(
@@ -301,6 +311,7 @@ app.post("/api/farms", (req, res) => {
         farmLng,
         farmAddress,
         farmPnu,
+        farmUid,
       );
 
     // ========================================
@@ -308,10 +319,9 @@ app.post("/api/farms", (req, res) => {
     // ========================================
 
     console.log("농장 등록 완료:", farmName);
-
     console.log("농지 주소:", farmAddress);
-
     console.log("PNU:", farmPnu);
+    console.log("UID:", farmUid);
 
     res.status(201).json({
       success: true,

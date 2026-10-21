@@ -17,6 +17,16 @@ import { loadFarmFields } from "./farmmap.js";
 let farmmapController = null;
 
 // ========================================
+// 현재 선택한 농지 정보
+// ========================================
+
+// 선택한 농지 UID
+let selectedFarmUid = null;
+
+// 선택한 농지 PNU
+let selectedFarmPnu = null;
+
+// ========================================
 // 🌱 농사 가이드 앱 초기화
 // ========================================
 
@@ -61,6 +71,21 @@ async function initApp() {
     // 농지 선택 이벤트
     (properties, position) => {
       console.log("🌱 농지 선택:", properties);
+
+      // ========================================
+      // 선택한 농지 UID 저장
+      // ========================================
+
+      selectedFarmUid =
+        properties.UID === null || properties.UID === undefined
+          ? null
+          : String(properties.UID).trim() || null;
+
+      // 선택한 농지 PNU 저장
+      selectedFarmPnu = String(properties.PNU ?? "").trim();
+
+      console.log("선택한 농지 UID:", selectedFarmUid);
+      console.log("선택한 농지 PNU:", selectedFarmPnu);
 
       // 상세 주소
       const address = getFarmAddress(properties);
@@ -133,6 +158,22 @@ function initFarmForm(mapController, farmmapController) {
     // PNU
     const pnu = document.getElementById("farmPnuInput").value;
 
+    // ========================================
+    // 선택한 농지 UID
+    // ========================================
+
+    const farmUid = selectedFarmPnu === pnu.trim() ? selectedFarmUid : null;
+
+    // PNU가 있는데 UID가 없는 경우
+    if (pnu.trim() && !farmUid) {
+      alert(
+        "농지 UID를 확인할 수 없습니다. 지도에서 농지를 다시 선택해주세요.",
+      );
+      return;
+    }
+
+    console.log("등록할 농지 UID:", farmUid);
+
     try {
       const response = await fetch("/api/farms", {
         method: "POST",
@@ -149,6 +190,9 @@ function initFarmForm(mapController, farmmapController) {
           longitude: location.longitude,
           address,
           pnu,
+
+          // 팜맵 농지 고유번호
+          farm_uid: farmUid,
         }),
       });
 
@@ -166,6 +210,13 @@ function initFarmForm(mapController, farmmapController) {
 
       // 입력창 초기화
       form.reset();
+
+      // ========================================
+      // 선택한 농지 정보 초기화
+      // ========================================
+
+      selectedFarmUid = null;
+      selectedFarmPnu = null;
 
       // 선택 위치 마커 제거
       mapController.resetSelectedLocation();

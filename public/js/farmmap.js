@@ -54,20 +54,25 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
     console.log("농지 개수:", geojson.features.length);
 
     // ========================================
-    // 3. 등록된 농지 PNU 관리
+    // 3. 등록된 농지 UID 관리
     // ========================================
 
-    let registeredPnus = new Set();
+    // 등록된 농지 UID 목록
+    let registeredUids = new Set();
 
-    function updateRegisteredPnus(farms) {
-      registeredPnus = new Set(
-        farms
-          .map((farm) => String(farm.pnu ?? "").trim())
-          .filter((pnu) => /^\d{19}$/.test(pnu)),
+    // SQLite에서 가져온 농장 목록으로 UID 갱신
+    function updateRegisteredUids(farms) {
+      registeredUids = new Set(
+        (Array.isArray(farms) ? farms : [])
+          .map((farm) => String(farm.farm_uid ?? "").trim())
+          .filter((uid) => uid !== ""),
       );
+
+      console.log("🌱 등록된 농지 UID:", [...registeredUids]);
     }
 
-    updateRegisteredPnus(registeredFarms);
+    // 최초 등록 농지 정보 설정
+    updateRegisteredUids(registeredFarms);
 
     // ========================================
     // 4. 폴리곤 관리
@@ -84,13 +89,17 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
 
     // ========================================
     // 5. 농지 색상 적용
+    // UID 기준
     // ========================================
 
-    function applyPolygonStyle(polygon, pnu) {
-      const isRegistered = registeredPnus.has(pnu);
+    function applyPolygonStyle(polygon, uid) {
+      // UID로 등록 여부 확인
+      const isRegistered = uid !== "" && registeredUids.has(uid);
 
+      // 등록 여부에 따라 색상 결정
       const style = isRegistered ? FARM_COLORS.registered : FARM_COLORS.normal;
 
+      // 지도에 색상 적용
       polygon.setOptions(style);
     }
 
@@ -120,7 +129,19 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
     function drawPolygon(rings, properties) {
       const paths = rings.map(convertRing);
 
+      // ========================================
+      // 농지 식별 정보
+      // ========================================
+
+      // PNU
       const pnu = String(properties.PNU ?? "").trim();
+
+      // UID
+      const uid = String(properties.UID ?? "").trim();
+
+      // ========================================
+      // 농지 폴리곤 생성
+      // ========================================
 
       const polygon = new naver.maps.Polygon({
         map: map,
@@ -128,13 +149,14 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
         clickable: true,
       });
 
-      // 등록 여부에 따라 색상 적용
-      applyPolygonStyle(polygon, pnu);
+      // UID 기준 색상 적용
+      applyPolygonStyle(polygon, uid);
 
       // 폴리곤 정보 저장
       polygons.push({
         polygon,
         pnu,
+        uid,
       });
 
       // ========================================
@@ -146,13 +168,14 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
 
         // 이전 농지 색상 복구
         if (selectedPolygon) {
-          applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.pnu);
+          applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.uid);
         }
 
         // 현재 농지 선택
         selectedPolygon = {
           polygon,
           pnu,
+          uid,
         };
 
         // 선택한 농지 강조
@@ -214,18 +237,23 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
     // ========================================
 
     function setRegisteredFarms(farms) {
-      updateRegisteredPnus(farms);
+      // 최신 등록 농지 UID 목록 반영
+      updateRegisteredUids(farms);
 
-      polygons.forEach(({ polygon, pnu }) => {
+      // 모든 농지 폴리곤 순회
+      polygons.forEach(({ polygon, uid }) => {
         // 현재 선택된 농지는 주황색 유지
         if (selectedPolygon?.polygon === polygon) {
           return;
         }
 
-        applyPolygonStyle(polygon, pnu);
+        // UID 기준으로 색상 갱신
+        applyPolygonStyle(polygon, uid);
       });
 
-      console.log("등록된 농지 PNU 개수:", registeredPnus.size);
+      console.log("🌱 등록된 농지 UID 개수:", registeredUids.size);
+
+      console.log("🌱 농지 색상 갱신 완료!");
     }
 
     // ========================================
@@ -237,8 +265,10 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
         return;
       }
 
-      applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.pnu);
+      // UID 기준으로 원래 색상 복구
+      applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.uid);
 
+      // 선택 정보 초기화
       selectedPolygon = null;
     }
 
