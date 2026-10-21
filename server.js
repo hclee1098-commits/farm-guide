@@ -329,6 +329,49 @@ app.post("/api/farms", (req, res) => {
 });
 
 // ========================================
+// 농장 삭제 API
+// ========================================
+
+app.delete("/api/farms/:id", (req, res) => {
+  try {
+    // 삭제할 농장 ID
+    const id = Number(req.params.id);
+
+    // ID 유효성 검사
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 ID가 아닙니다.",
+      });
+    }
+
+    // 데이터베이스에서 농장 삭제
+    const result = db.prepare("DELETE FROM farms WHERE id = ?").run(id);
+
+    // 삭제할 농장이 없는 경우
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "농장을 찾을 수 없습니다.",
+      });
+    }
+
+    // 삭제 성공
+    res.json({
+      success: true,
+      message: "농장이 삭제되었습니다.",
+    });
+  } catch (error) {
+    console.error("농장 삭제 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "농장 삭제 중 오류가 발생했습니다.",
+    });
+  }
+});
+
+// ========================================
 // 8. 팜맵 WFS API 테스트
 // ========================================
 

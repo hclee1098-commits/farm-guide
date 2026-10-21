@@ -11,6 +11,12 @@ import { createMap } from "./map.js";
 import { loadFarmFields } from "./farmmap.js";
 
 // ========================================
+// 팜맵 컨트롤러 관리
+// ========================================
+
+let farmmapController = null;
+
+// ========================================
 // 🌱 농사 가이드 앱 초기화
 // ========================================
 
@@ -49,7 +55,7 @@ async function initApp() {
   // 4. 팜맵 농지 경계 표시
   // ========================================
 
-  const farmmapController = await loadFarmFields(
+  farmmapController = await loadFarmFields(
     mapController.map,
 
     // 농지 선택 이벤트
@@ -252,6 +258,81 @@ async function loadFarms(mapController) {
       item.appendChild(area);
       item.appendChild(address);
       item.appendChild(pnu);
+
+      // ========================================
+      // 농장 삭제 버튼
+      // ========================================
+
+      const deleteBtn = document.createElement("button");
+
+      deleteBtn.type = "button";
+      deleteBtn.textContent = "🗑 삭제";
+      deleteBtn.className = "farm-delete-btn";
+
+      // ========================================
+      // 농장 삭제 버튼 클릭
+      // ========================================
+
+      deleteBtn.addEventListener("click", async () => {
+        // 삭제 확인
+        const confirmed = confirm(`${farm.name} 농장을 삭제하시겠습니까?`);
+
+        if (!confirmed) {
+          return;
+        }
+
+        try {
+          // ========================================
+          // 1. SQLite에서 농장 삭제
+          // ========================================
+
+          const response = await fetch(`/api/farms/${farm.id}`, {
+            method: "DELETE",
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.message || "농장 삭제 실패");
+          }
+
+          console.log("농장 삭제 완료:", farm.name);
+
+          // ========================================
+          // 2. 최신 농장 목록 다시 조회
+          // ========================================
+
+          const updatedFarms = await loadFarms(mapController);
+
+          if (!Array.isArray(updatedFarms)) {
+            throw new Error(
+              "농장은 삭제됐지만 목록을 새로고침하지 못했습니다.",
+            );
+          }
+
+          // ========================================
+          // 3. 지도에 등록된 농지 정보 갱신
+          // ========================================
+
+          if (farmmapController) {
+            // 최신 등록 농지 목록 반영
+            farmmapController.setRegisteredFarms(updatedFarms);
+
+            // 현재 선택된 농지 강조 해제
+            farmmapController.clearSelection();
+
+            console.log("지도 농지 색상 갱신 완료!");
+          }
+
+          alert("농장이 삭제되었습니다.");
+        } catch (error) {
+          console.error("농장 삭제 오류:", error);
+
+          alert(error.message);
+        }
+      });
+      // 농장 카드에 삭제 버튼 추가
+      item.appendChild(deleteBtn);
 
       farmList.appendChild(item);
     });
