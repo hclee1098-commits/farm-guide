@@ -1,0 +1,223 @@
+/* ========================================
+   🌱 농사 가이드 - 농지 정보 스타일
+======================================== */
+
+/* ========================================
+   1. 농지 정보 전체 영역
+======================================== */
+
+.farm-info-section {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px 0;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* ========================================
+   2. 농지 정보 제목
+======================================== */
+
+.farm-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.farm-info-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b5e20;
+  margin: 0;
+}
+
+/* ========================================
+   3. 팜맵 데이터 배지
+======================================== */
+
+.farm-info-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+/* ========================================
+   4. 농지 선택 전 안내
+======================================== */
+
+.farm-empty {
+  text-align: center;
+  padding: 35px 10px;
+  color: #888;
+  background: #f8faf8;
+  border-radius: 10px;
+}
+
+/* ========================================
+   5. 농지 정보 그리드
+======================================== */
+
+.farm-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+/* ========================================
+   6. 농지 정보 항목
+======================================== */
+
+.farm-info-item {
+  background: #f8faf8;
+  border: 1px solid #e8eee8;
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 0;
+}
+
+/* 전체 너비 사용 */
+
+.farm-info-item.full {
+  grid-column: 1 / -1;
+}
+
+/* 항목 이름 */
+
+.farm-info-item label {
+  display: block;
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 8px;
+}
+
+/* 항목 데이터 */
+
+.farm-info-item div {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  overflow-wrap: anywhere;
+}
+
+/* ========================================
+   7. 농지 등록 버튼
+======================================== */
+
+.farm-register-btn {
+  width: 100%;
+  padding: 15px;
+  margin-top: 20px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.farm-register-btn:hover {
+  background: #1b5e20;
+}
+
+/* ========================================
+   8. 모바일 반응형
+======================================== */
+
+@media (max-width: 600px) {
+  .farm-info-section {
+    padding: 16px;
+  }
+
+  .farm-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
+   🌱 농지 관리 탭 디자인
+======================================== */
+
+/* 탭 메뉴 */
+
+.farm-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+/* 탭 버튼 */
+
+.farm-tab {
+  flex: 1;
+  padding: 15px 10px;
+
+  background: transparent;
+  color: #777;
+
+  border: none;
+  border-bottom: 3px solid transparent;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s;
+}
+
+/* 탭 마우스 오버 */
+
+.farm-tab:hover {
+  color: #23834b;
+  background: #f4f8f4;
+}
+
+/* 선택된 탭 */
+
+.farm-tab.active {
+  color: #23834b;
+  border-bottom-color: #23834b;
+}
+
+/* 키보드 접근성 */
+
+.farm-tab:focus-visible {
+  outline: 2px solid #23834b;
+  outline-offset: 2px;
+}
+
+/* 탭 내용 */
+
+.farm-tab-panel {
+  padding-top: 10px;
+}
+
+/* 숨겨진 탭 */
+
+.farm-tab-panel[hidden] {
+  display: none;
+}
+
+/* 읽기 전용 입력창 */
+
+input[readonly] {
+  background: #f5f7f5;
+  color: #555;
+  cursor: default;
+}
+
+/* 모바일 */
+
+@media (max-width: 600px) {
+  .farm-tab {
+    font-size: 14px;
+    padding: 12px 5px;
+  }
+}

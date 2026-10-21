@@ -1,0 +1,160 @@
+/* ========================================
+   🌱 농사 가이드 - 공통 스타일
+======================================== */
+
+/* ========================================
+   1. 기본 설정
+======================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, "Malgun Gothic", sans-serif;
+  background: #f4f8f4;
+  color: #263b2d;
+}
+
+/* ========================================
+   2. 상단 헤더
+======================================== */
+
+header {
+  background: #ffffff;
+  padding: 25px 20px;
+  text-align: center;
+  border-bottom: 1px solid #e0e8e0;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 30px;
+  color: #23834b;
+}
+
+header p {
+  color: #777;
+  font-size: 14px;
+  margin-bottom: 0;
+}
+
+/* ========================================
+   3. 메인 화면 레이아웃
+======================================== */
+
+.container {
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+/* 공통 카드 */
+
+.card {
+  background: white;
+  padding: 25px;
+  margin-bottom: 25px;
+  border-radius: 15px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* 공통 제목 */
+
+h2 {
+  font-size: 20px;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* ========================================
+   4. 입력창
+======================================== */
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #23834b;
+}
+
+/* ========================================
+   5. 저장 버튼
+======================================== */
+
+.save-btn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+
+  background: #23834b;
+  color: white;
+
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background: #196838;
+}
+
+/* ========================================
+   6. 농장 목록
+======================================== */
+
+.farm-item {
+  background: #f5faf5;
+  padding: 18px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid #e0eee0;
+}
+
+.farm-item h3 {
+  margin-top: 0;
+  color: #23834b;
+}
+
+.farm-item p {
+  margin: 6px 0;
+  font-size: 14px;
+}
+
+/* ========================================
+   7. 모바일 반응형
+======================================== */
+
+@media (max-width: 600px) {
+  header h1 {
+    font-size: 25px;
+  }
+
+  .container {
+    margin-top: 15px;
+    padding: 0 12px;
+  }
+
+  .card {
+    padding: 18px;
+  }
+}

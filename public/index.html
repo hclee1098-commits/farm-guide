@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>농사 가이드</title>
+
+    <!-- 공통 CSS -->
+    <link rel="stylesheet" href="/css/style.css" />
+
+    <!-- 지도 CSS -->
+    <link rel="stylesheet" href="/css/map.css" />
+
+    <!-- 농지 정보 CSS -->
+    <link rel="stylesheet" href="/css/farm-info.css" />
+  </head>
+
+  <body>
+    <!-- =====================================
+         1. 상단 헤더
+    ===================================== -->
+
+    <header>
+      <h1>🌱 농사 가이드</h1>
+      <p>스마트한 농장 관리의 시작</p>
+    </header>
+
+    <main class="container">
+      <!-- =====================================
+           2. 네이버 지도
+      ===================================== -->
+
+      <section class="card">
+        <h2>📍 농장 위치</h2>
+
+        <div id="map"></div>
+
+        <p id="selectedLocation">📍 지도에서 농장 위치를 선택해주세요.</p>
+      </section>
+
+      <!-- =====================================
+           3. 농지 정보 / 농지 등록 탭
+      ===================================== -->
+
+      <section class="card">
+        <!-- 탭 메뉴 -->
+        <div class="farm-tabs" role="tablist" aria-label="농지 관리">
+          <button
+            type="button"
+            class="farm-tab active"
+            id="farmInfoTab"
+            role="tab"
+            aria-controls="farmInfoPanel"
+            aria-selected="true"
+          >
+            📋 농지 정보
+          </button>
+
+          <button
+            type="button"
+            class="farm-tab"
+            id="farmRegisterTab"
+            role="tab"
+            aria-controls="farmRegisterPanel"
+            aria-selected="false"
+          >
+            🌱 농지 등록
+          </button>
+        </div>
+
+        <!-- =====================================
+             4. 농지 정보 탭
+        ===================================== -->
+
+        <div
+          id="farmInfoPanel"
+          class="farm-tab-panel"
+          role="tabpanel"
+          aria-labelledby="farmInfoTab"
+        >
+          <section class="farm-info-section" id="farmInfoSection">
+            <div class="farm-info-header">
+              <h2>🌱 선택한 농지 정보</h2>
+
+              <span class="farm-info-badge"> 팜맵 데이터 </span>
+            </div>
+
+            <!-- 농지 선택 전 -->
+            <div id="farmEmptyMessage" class="farm-empty">
+              지도에서 농지를 선택해주세요.
+            </div>
+
+            <!-- 농지 선택 후 -->
+            <div id="farmInfoContent" style="display: none">
+              <div class="farm-info-grid">
+                <!-- 농지 주소 -->
+                <div class="farm-info-item full">
+                  <label>📍 농지 주소</label>
+                  <div id="farmAddress">-</div>
+                </div>
+
+                <!-- 농지 종류 -->
+                <div class="farm-info-item">
+                  <label>🌾 농지 종류</label>
+                  <div id="farmType">-</div>
+                </div>
+
+                <!-- 농지 면적 -->
+                <div class="farm-info-item">
+                  <label>📐 농지 면적</label>
+                  <div id="selectedFarmArea">-</div>
+                </div>
+
+                <!-- 농지 고유번호 -->
+                <div class="farm-info-item">
+                  <label>🔢 농지 고유번호</label>
+                  <div id="farmUid">-</div>
+                </div>
+
+                <!-- PNU -->
+                <div class="farm-info-item">
+                  <label>🏷️ 필지 번호(PNU)</label>
+                  <div id="farmPnu">-</div>
+                </div>
+              </div>
+
+              <!-- 농지 등록 버튼 -->
+              <button
+                type="button"
+                class="farm-register-btn"
+                id="farmRegisterBtn"
+              >
+                🌱 이 농지 등록하기
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <!-- =====================================
+             5. 농지 등록 탭
+        ===================================== -->
+
+        <div
+          id="farmRegisterPanel"
+          class="farm-tab-panel"
+          role="tabpanel"
+          aria-labelledby="farmRegisterTab"
+          hidden
+        >
+          <h2>📝 농장 정보 입력</h2>
+
+          <form id="farmForm">
+            <!-- 농장 이름 -->
+            <div class="form-group">
+              <label for="farmName">농장 이름</label>
+
+              <input
+                type="text"
+                id="farmName"
+                placeholder="예: 우리 농장"
+                required
+              />
+            </div>
+
+            <!-- 재배 작물 -->
+            <div class="form-group">
+              <label for="farmCrop">재배 작물</label>
+
+              <input
+                type="text"
+                id="farmCrop"
+                placeholder="예: 고추, 배추, 상추"
+              />
+            </div>
+
+            <!-- 농지 주소 -->
+            <div class="form-group">
+              <label for="farmAddressInput"> 📍 농지 주소 </label>
+
+              <input
+                type="text"
+                id="farmAddressInput"
+                placeholder="농지를 선택하면 자동 입력됩니다."
+                readonly
+              />
+            </div>
+
+            <!-- 농지 면적 -->
+            <div class="form-group">
+              <label for="farmArea"> 📐 농지 면적 (㎡) </label>
+
+              <input
+                type="number"
+                id="farmArea"
+                min="0"
+                step="0.01"
+                placeholder="예: 500"
+              />
+            </div>
+
+            <!-- PNU -->
+            <div class="form-group">
+              <label for="farmPnuInput"> 🏷️ 필지 번호(PNU) </label>
+
+              <input
+                type="text"
+                id="farmPnuInput"
+                placeholder="농지를 선택하면 자동 입력됩니다."
+                readonly
+              />
+            </div>
+
+            <!-- 저장 버튼 -->
+            <button type="submit" class="save-btn">🌱 농장 정보 저장</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- =====================================
+           6. 저장된 농장 목록
+      ===================================== -->
+
+      <section class="card">
+        <h2>📋 등록된 농장</h2>
+
+        <div id="farmList">등록된 농장이 없습니다.</div>
+      </section>
+    </main>
+
+    <!-- =====================================
+         네이버 지도 API
+    ===================================== -->
+
+    <script src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=__NAVER_MAP_CLIENT_ID__"></script>
+
+    <!-- =====================================
+         메인 JavaScript
+    ===================================== -->
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

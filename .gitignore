@@ -1,0 +1,35 @@
+# ========================================
+# 농사 가이드 Git 제외 설정
+# ========================================
+
+# 환경변수 및 API 인증 정보
+.env
+.env.*
+!.env.example
+
+# Node.js 설치 패키지
+node_modules/
+
+# SQLite 데이터베이스
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# 팜맵 원본 및 가공 데이터
+data/
+
+# 로그 파일
+*.log
+logs/
+
+# 운영체제 임시 파일
+.DS_Store
+Thumbs.db
+
+# 임시 파일
+*.tmp
+*.bak
+
+# 개인 IDE 설정
+.vscode/

@@ -1,0 +1,18 @@
+farm-guide/
+│
+├── frontend/
+│   └── 웹앱 화면
+│
+├── backend/
+│   └── API 서버
+│
+└── database/
+    │
+    ├── farm-guide.db
+    │   └── 사용자 농장 정보
+    │
+    └── farmland.db
+        └── 농지 경계 정보
+		
+		
+		
