@@ -35,45 +35,54 @@
            2. 네이버 지도
       ===================================== -->
 
+      <!-- ======================================== -->
+      <!-- 🔎 농지 주소 검색 (접기 / 펼치기) -->
+      <!-- ======================================== -->
+
+      <section class="card farm-search-section">
+        <details class="farm-search-accordion">
+          <!-- 클릭하면 열리고 닫히는 제목 -->
+          <summary class="farm-search-toggle">
+            <span>🔎 농지 주소 검색</span>
+            <span class="farm-search-arrow" aria-hidden="true"></span>
+          </summary>
+
+          <!-- 검색 영역 -->
+          <div class="farm-search-content">
+            <form id="farmSearchForm" class="farm-search-form">
+              <input
+                type="search"
+                id="farmSearchInput"
+                placeholder="예: 영양군 홍계리 351-1"
+                autocomplete="off"
+              />
+
+              <button type="submit" id="farmSearchBtn">🔍 검색</button>
+            </form>
+
+            <!-- 검색 결과 -->
+            <div
+              id="farmSearchResults"
+              class="farm-search-results"
+              aria-live="polite"
+            ></div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ======================================== -->
+      <!-- 🗺️ 네이버 지도 표시 영역 -->
+      <!-- ======================================== -->
+
       <section class="card">
         <h2>📍 농장 위치</h2>
 
-        <!-- ===================================== -->
-        <!-- 농지 주소 검색 -->
-        <!-- ===================================== -->
-
-        <section class="farm-search-section">
-          <h2>🔎 농지 주소 검색</h2>
-
-          <p class="farm-search-description">
-            주소, 지번 또는 PNU로 농지를 검색할 수 있습니다.
-          </p>
-
-          <form id="farmSearchForm" class="farm-search-form">
-            <input
-              type="search"
-              id="farmSearchInput"
-              placeholder="예: 영양군 석보면 홍계리 351-1"
-              aria-label="농지 주소 검색"
-              autocomplete="off"
-            />
-
-            <button type="submit" id="farmSearchBtn">🔍 검색</button>
-          </form>
-
-          <!-- 검색 결과 -->
-          <div
-            id="farmSearchResults"
-            class="farm-search-results"
-            aria-live="polite"
-          ></div>
-        </section>
-
+        <!-- 네이버 지도 -->
         <div id="map"></div>
 
+        <!-- 선택한 위치 정보 -->
         <p id="selectedLocation">📍 지도에서 농장 위치를 선택해주세요.</p>
       </section>
-
       <!-- =====================================
            3. 농지 정보 / 농지 등록 탭
       ===================================== -->

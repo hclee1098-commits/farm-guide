@@ -186,3 +186,96 @@
   color: #777;
   padding: 10px;
 }
+
+/* ======================================== */
+/* 🌱 농지 주소 검색 아코디언 */
+/* ======================================== */
+
+/* 검색 영역 */
+
+.farm-search-section {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 아코디언 */
+
+.farm-search-accordion {
+  width: 100%;
+}
+
+/* 클릭 가능한 제목 */
+
+.farm-search-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 22px 25px;
+
+  font-size: 20px;
+  font-weight: 700;
+
+  color: #263b2d;
+
+  cursor: pointer;
+  user-select: none;
+
+  list-style: none;
+
+  transition: background 0.2s;
+}
+
+/* 기본 삼각형 제거 */
+
+.farm-search-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.farm-search-toggle::marker {
+  content: "";
+}
+
+/* 마우스 올렸을 때 */
+
+.farm-search-toggle:hover {
+  background: #f5faf5;
+}
+
+/* 화살표 */
+
+.farm-search-arrow::after {
+  content: "▼";
+
+  font-size: 15px;
+  color: #23834b;
+
+  transition: transform 0.2s;
+}
+
+/* 펼쳐진 상태 */
+
+.farm-search-accordion[open] .farm-search-arrow::after {
+  content: "▲";
+}
+
+/* 검색창 내용 */
+
+.farm-search-content {
+  padding: 20px 25px 25px;
+
+  border-top: 1px solid #e5eee5;
+}
+
+/* 모바일 */
+
+@media (max-width: 600px) {
+  .farm-search-toggle {
+    padding: 18px;
+    font-size: 17px;
+  }
+
+  .farm-search-content {
+    padding: 15px 18px 20px;
+  }
+}
