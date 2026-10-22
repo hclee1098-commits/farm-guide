@@ -13,6 +13,9 @@ import { loadFarmFields } from "./farmmap.js";
 // 농지 검색 기능
 import { initFarmSearch } from "./farm-search.js";
 
+// 농지 정보 팝업
+import { createFarmPopup } from "./farm-popup.js";
+
 // ========================================
 // 팜맵 컨트롤러 관리
 // ========================================
@@ -65,6 +68,12 @@ async function initApp() {
   const mapController = createMap();
 
   // ========================================
+  // 🌱 농지 정보 팝업 생성
+  // ========================================
+
+  const farmPopup = createFarmPopup(mapController.map);
+
+  // ========================================
   // 3. 저장된 농장 목록 불러오기
   // ========================================
 
@@ -100,6 +109,12 @@ async function initApp() {
       const address = getFarmAddress(properties);
 
       document.getElementById("farmAddressInput").value = address;
+
+      // ========================================
+      // 🌱 선택한 농지 정보 팝업 표시
+      // ========================================
+
+      farmPopup.show(properties, position, address);
 
       // PNU
       const pnu = String(properties.PNU ?? "");
@@ -137,7 +152,7 @@ async function initApp() {
   // 5. 농장 등록 기능 연결
   // ========================================
 
-  initFarmForm(mapController, farmmapController);
+  initFarmForm(mapController, farmmapController, farmPopup);
 
   console.log("🌱 농사 가이드 앱 초기화 완료!");
 }
@@ -146,7 +161,7 @@ async function initApp() {
 // 2. 농장 등록 폼
 // ========================================
 
-function initFarmForm(mapController, farmmapController) {
+function initFarmForm(mapController, farmmapController, farmPopup) {
   const form = document.getElementById("farmForm");
 
   form.addEventListener("submit", async (e) => {
@@ -227,6 +242,9 @@ function initFarmForm(mapController, farmmapController) {
 
       // 입력창 초기화
       form.reset();
+
+      // 농지 정보 팝업 닫기
+      farmPopup.close();
 
       // ========================================
       // 선택한 농지 정보 초기화
