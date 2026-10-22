@@ -140,6 +140,12 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
 let diaryFormInitialized = false;
 
 // ========================================
+// 재배 일지 화면 전환 구분 번호
+// ========================================
+
+let diarySession = 0;
+
+// ========================================
 // 1. 재배 일지 작성 폼 초기화
 // ========================================
 
@@ -248,6 +254,12 @@ export function initFarmDiary(getFarmId) {
 
     const farmId = Number(getFarmId());
 
+    // ========================================
+    // 저장을 시작한 화면 구분 번호
+    // ========================================
+
+    const saveSession = diarySession;
+
     if (!Number.isSafeInteger(farmId) || farmId <= 0) {
       alert("농장 정보를 확인할 수 없습니다.");
       return;
@@ -300,47 +312,63 @@ export function initFarmDiary(getFarmId) {
       if (!response.ok) {
         throw new Error(result.message || "재배 일지 저장 실패");
       }
+      // ========================================
+      // 📖 재배 일지 저장 완료
+      // ========================================
 
       console.log("📖 재배 일지 저장 완료:", result);
-
-      // ========================================
-      // 입력 폼 초기화
-      // ========================================
-
-      closeForm();
 
       // ========================================
       // 현재 농장 화면인지 확인
       // ========================================
 
-      const stillCurrent =
-        Number(getFarmId()) === farmId &&
-        !document.getElementById("farmView").hidden;
+      const isStillCurrent = () => {
+        const farmView = document.getElementById("farmView");
 
-      if (stillCurrent) {
-        // ========================================
-        // 저장 후 재배 일지 목록 갱신
-        // ========================================
-
-        await loadFarmDiaries(
-          farmId,
-          () =>
-            Number(getFarmId()) === farmId &&
-            !document.getElementById("farmView").hidden,
+        return (
+          diarySession === saveSession &&
+          Number(getFarmId()) === farmId &&
+          farmView !== null &&
+          !farmView.hidden
         );
+      };
 
-        alert("🌱 재배 일지가 저장되었습니다!");
+      // ========================================
+      // 현재 농장인 경우에만 화면 갱신
+      // ========================================
+
+      if (isStillCurrent()) {
+        // 입력 폼 초기화
+        closeForm();
+
+        // 저장된 재배 일지 다시 조회
+        await loadFarmDiaries(farmId, isStillCurrent);
+
+        // 화면이 유지된 경우에만 알림
+        if (isStillCurrent()) {
+          alert("🌱 재배 일지가 저장되었습니다!");
+        }
       }
     } catch (error) {
       console.error("재배 일지 저장 오류:", error);
 
-      if (Number(getFarmId()) === farmId) {
+      const farmView = document.getElementById("farmView");
+
+      if (
+        diarySession === saveSession &&
+        Number(getFarmId()) === farmId &&
+        farmView &&
+        !farmView.hidden
+      ) {
         alert(error.message);
       }
     } finally {
-      saveBtn.disabled = false;
+      // 같은 화면에서 시작한 저장 요청일 때만 버튼 복구
+      if (diarySession === saveSession) {
+        saveBtn.disabled = false;
 
-      saveBtn.textContent = "💾 저장하기";
+        saveBtn.textContent = "💾 저장하기";
+      }
     }
   });
 
@@ -353,18 +381,50 @@ export function initFarmDiary(getFarmId) {
 // 6. 재배 일지 입력 폼 초기화
 // ========================================
 
+// ========================================
+// 📖 재배 일지 입력 폼 초기화
+// ========================================
+
 export function resetFarmDiaryForm() {
+  // ========================================
+  // 화면 전환 번호 갱신
+  // ========================================
+
+  diarySession++;
+
+  // ========================================
+  // HTML 요소 가져오기
+  // ========================================
+
   const form = document.getElementById("diaryForm");
 
   const writeBtn = document.getElementById("diaryWriteBtn");
 
+  const saveBtn = document.getElementById("diarySaveBtn");
+
   if (!form || !writeBtn) {
     return;
   }
+
+  // ========================================
+  // 입력 폼 초기화
+  // ========================================
 
   form.reset();
 
   form.hidden = true;
 
   writeBtn.setAttribute("aria-expanded", "false");
+
+  // ========================================
+  // 저장 버튼 초기화
+  // ========================================
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+
+    saveBtn.textContent = "💾 저장하기";
+  }
+
+  console.log("📖 재배 일지 입력 폼 초기화 완료!");
 }
