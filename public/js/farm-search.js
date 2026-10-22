@@ -142,8 +142,16 @@ export function initFarmSearch(getFarmmapController) {
       // 검색 결과 클릭
       // ========================================
 
+      // ========================================
+      // 🌱 검색 결과 클릭
+      // ========================================
+
       item.addEventListener("click", () => {
         console.log("📍 검색 농지 선택:", farm);
+
+        // ========================================
+        // 1. 선택한 농지로 지도 이동
+        // ========================================
 
         const success = farmmapController.focusFarm(farm.featureIndex);
 
@@ -152,12 +160,44 @@ export function initFarmSearch(getFarmmapController) {
           return;
         }
 
-        // 선택 결과 표시
+        // ========================================
+        // 2. 선택한 검색 결과 강조
+        // ========================================
+
         resultBox.querySelectorAll(".farm-search-item").forEach((button) => {
           button.classList.remove("selected");
         });
 
         item.classList.add("selected");
+
+        // ========================================
+        // 3. 농지 주소 검색창 자동 접기
+        // ========================================
+
+        const searchAccordion = searchForm.closest(".farm-search-accordion");
+
+        if (searchAccordion) {
+          searchAccordion.open = false;
+
+          console.log("🔎 농지 검색창 자동 접기 완료");
+        }
+
+        // ========================================
+        // 4. 지도 영역으로 화면 스크롤
+        // ========================================
+
+        const mapElement = document.getElementById("map");
+
+        if (mapElement) {
+          requestAnimationFrame(() => {
+            mapElement.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
+        }
+
+        console.log("🌱 검색 농지 선택 및 지도 이동 완료!");
       });
 
       resultBox.appendChild(item);
