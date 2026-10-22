@@ -662,3 +662,135 @@ input:focus {
     padding: 0 8px;
   }
 }
+
+/* ======================================== */
+/* 🌱 SPA 화면 전환 */
+/* ======================================== */
+
+/* 숨겨진 화면은 표시하지 않음 */
+[hidden] {
+  display: none !important;
+}
+
+/* ======================================== */
+/* 농장 관리 화면 */
+/* ======================================== */
+
+.farm-detail-view {
+  min-height: 100vh;
+
+  background: #f5f8f5;
+
+  padding: 30px 20px;
+}
+
+.farm-detail-container {
+  max-width: 1100px;
+
+  margin: 0 auto;
+}
+
+/* ======================================== */
+/* 농장 관리 헤더 */
+/* ======================================== */
+
+.farm-detail-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 15px;
+
+  margin-bottom: 25px;
+}
+
+.farm-detail-header h2 {
+  color: #2e7d32;
+
+  margin: 0;
+}
+
+/* ======================================== */
+/* 메인으로 버튼 */
+/* ======================================== */
+
+.farm-back-btn {
+  padding: 12px 20px;
+
+  background: #eeeeee;
+  color: #444;
+
+  border: 1px solid #bdbdbd;
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.farm-back-btn:hover {
+  background: #dddddd;
+}
+
+/* ======================================== */
+/* 농장 상세 카드 */
+/* ======================================== */
+
+.farm-detail-card {
+  background: white;
+
+  padding: 25px;
+
+  border-radius: 12px;
+
+  margin-bottom: 20px;
+
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.farm-detail-card h2 {
+  color: #2e7d32;
+
+  margin-top: 0;
+}
+
+/* ======================================== */
+/* 농장 정보 */
+/* ======================================== */
+
+.farm-detail-info {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 15px;
+}
+
+.farm-detail-info p {
+  background: #f8faf8;
+
+  padding: 15px;
+
+  border-radius: 8px;
+
+  margin: 0;
+
+  overflow-wrap: anywhere;
+}
+
+/* ======================================== */
+/* 모바일 대응 */
+/* ======================================== */
+
+@media (max-width: 600px) {
+  .farm-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .farm-detail-info {
+    grid-template-columns: 1fr;
+  }
+}

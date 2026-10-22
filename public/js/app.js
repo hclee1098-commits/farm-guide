@@ -16,6 +16,9 @@ import { initFarmSearch } from "./farm-search.js";
 // 농지 정보 팝업
 import { createFarmPopup } from "./farm-popup.js";
 
+// SPA 농장 관리 화면
+import { initFarmView, openFarmView } from "./farm-view.js";
+
 // ========================================
 // 팜맵 컨트롤러 관리
 // ========================================
@@ -101,6 +104,12 @@ async function initApp() {
   // ========================================
 
   const mapController = createMap();
+
+  // ========================================
+  // 🌱 SPA 화면 관리 초기화
+  // ========================================
+
+  initFarmView(mapController);
 
   // ========================================
   // 🌱 농지 정보 팝업 생성
@@ -633,11 +642,15 @@ async function loadFarms(mapController) {
       // 2. 농장 관리 버튼 클릭
       // ========================================
 
-      manageBtn.addEventListener("click", () => {
-        console.log("🌱 농장 관리 페이지 이동:", farm.id);
+      // ========================================
+      // ⚙️ 농장 관리 화면 열기
+      // ========================================
 
-        // 현재 도메인을 자동으로 사용
-        window.location.href = `/farm.html?id=${encodeURIComponent(farm.id)}`;
+      manageBtn.addEventListener("click", () => {
+        console.log("🌱 농장 관리 선택:", farm.id);
+
+        // 페이지 이동 없이 농장 관리 화면 표시
+        openFarmView(farm.id);
       });
 
       // ========================================
