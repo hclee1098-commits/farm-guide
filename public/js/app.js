@@ -601,9 +601,35 @@ async function loadFarms(mapController) {
           alert(error.message);
         }
       });
-      // 농장 카드에 삭제 버튼 추가
-      item.appendChild(deleteBtn);
+      // ========================================
+      // 🌱 농장 관리 버튼 영역
+      // 수정 / 삭제 버튼 가로 배치
+      // ========================================
 
+      // ========================================
+      // 🌱 농장 관리 버튼 영역
+      // ========================================
+
+      const actionButtons = document.createElement("div");
+
+      actionButtons.className = "farm-action-buttons";
+
+      // 수정 기능 생성
+      const editControls = createFarmEditControls(farm, mapController);
+
+      // 수정 버튼 추가
+      actionButtons.appendChild(editControls.container);
+
+      // 삭제 버튼 추가
+      actionButtons.appendChild(deleteBtn);
+
+      // 버튼 영역을 농장 카드에 추가
+      item.appendChild(actionButtons);
+
+      // 수정 폼은 버튼 영역 아래에 배치
+      item.appendChild(editControls.editForm);
+
+      // 농장 카드 표시
       farmList.appendChild(item);
     });
 
@@ -623,6 +649,225 @@ async function loadFarms(mapController) {
     farmList.textContent = "농장 정보를 불러오지 못했습니다.";
     return null;
   }
+}
+
+// ========================================
+// 🌱 농장 정보 수정 UI
+// ========================================
+
+function createFarmEditControls(farm, mapController) {
+  // ========================================
+  // 1. 수정 영역 생성
+  // ========================================
+
+  const container = document.createElement("div");
+
+  container.className = "farm-edit-controls";
+
+  // ========================================
+  // 2. 수정 버튼
+  // ========================================
+
+  const editBtn = document.createElement("button");
+
+  editBtn.type = "button";
+  editBtn.textContent = "✏️ 수정";
+  editBtn.className = "farm-edit-btn";
+
+  // ========================================
+  // 3. 수정 폼
+  // ========================================
+
+  const editForm = document.createElement("form");
+
+  editForm.className = "farm-edit-form";
+
+  // 처음에는 숨김
+  editForm.hidden = true;
+
+  // ========================================
+  // 4. 농장 이름 입력
+  // ========================================
+
+  const nameLabel = document.createElement("label");
+
+  nameLabel.textContent = "농장 이름";
+
+  const nameInput = document.createElement("input");
+
+  nameInput.type = "text";
+  nameInput.value = farm.name;
+  nameInput.required = true;
+
+  nameLabel.appendChild(nameInput);
+
+  // ========================================
+  // 5. 재배 작물 입력
+  // ========================================
+
+  const cropLabel = document.createElement("label");
+
+  cropLabel.textContent = "재배 작물";
+
+  const cropInput = document.createElement("input");
+
+  cropInput.type = "text";
+  cropInput.value = farm.crop || "";
+
+  cropLabel.appendChild(cropInput);
+
+  // ========================================
+  // 6. 농장 면적 입력
+  // ========================================
+
+  const areaLabel = document.createElement("label");
+
+  areaLabel.textContent = "농장 면적 (㎡)";
+
+  const areaInput = document.createElement("input");
+
+  areaInput.type = "number";
+  areaInput.min = "0";
+
+  // 소수점 제한 없음
+  areaInput.step = "any";
+
+  areaInput.value =
+    farm.area === null || farm.area === undefined ? "" : String(farm.area);
+
+  areaLabel.appendChild(areaInput);
+
+  // ========================================
+  // 7. 저장 버튼
+  // ========================================
+
+  const saveBtn = document.createElement("button");
+
+  saveBtn.type = "submit";
+  saveBtn.textContent = "💾 저장";
+  saveBtn.className = "farm-edit-save-btn";
+
+  // ========================================
+  // 8. 취소 버튼
+  // ========================================
+
+  const cancelBtn = document.createElement("button");
+
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "취소";
+  cancelBtn.className = "farm-edit-cancel-btn";
+
+  // ========================================
+  // 9. 수정 버튼 클릭
+  // ========================================
+
+  editBtn.addEventListener("click", () => {
+    editForm.hidden = !editForm.hidden;
+
+    if (!editForm.hidden) {
+      nameInput.focus();
+    } else {
+      editForm.reset();
+    }
+  });
+
+  // ========================================
+  // 10. 취소 버튼 클릭
+  // ========================================
+
+  cancelBtn.addEventListener("click", () => {
+    editForm.reset();
+
+    editForm.hidden = true;
+  });
+
+  // ========================================
+  // 11. 수정 내용 저장
+  // ========================================
+
+  editForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const name = nameInput.value.trim();
+
+    const crop = cropInput.value.trim();
+
+    const areaValue = areaInput.value;
+
+    const area = areaValue === "" ? null : Number(areaValue);
+
+    // 중복 저장 방지
+    saveBtn.disabled = true;
+
+    try {
+      // ========================================
+      // SQLite 수정 요청
+      // ========================================
+
+      const response = await fetch(`/api/farms/${farm.id}`, {
+        method: "PUT",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          name,
+          crop,
+          area,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "농장 정보 수정 실패");
+      }
+
+      console.log("🌱 농장 수정 완료:", farm.id);
+
+      // ========================================
+      // 등록된 농장 목록 갱신
+      // ========================================
+
+      const updatedFarms = await loadFarms(mapController);
+
+      if (!Array.isArray(updatedFarms)) {
+        alert("농장 정보는 수정되었지만 목록을 새로고침하지 못했습니다.");
+        return;
+      }
+
+      alert("🌱 농장 정보가 수정되었습니다!");
+    } catch (error) {
+      console.error("농장 수정 오류:", error);
+
+      alert(error.message);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  // ========================================
+  // 12. 수정 폼 구성
+  // ========================================
+
+  editForm.appendChild(nameLabel);
+  editForm.appendChild(cropLabel);
+  editForm.appendChild(areaLabel);
+
+  editForm.appendChild(saveBtn);
+  editForm.appendChild(cancelBtn);
+
+  // ========================================
+  // 13. 수정 영역 구성
+  // ========================================
+
+  container.appendChild(editBtn);
+
+  return {
+    container,
+    editForm,
+  };
 }
 
 // ========================================

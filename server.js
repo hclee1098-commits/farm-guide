@@ -382,6 +382,112 @@ app.delete("/api/farms/:id", (req, res) => {
 });
 
 // ========================================
+// 🌱 농장 정보 수정 API
+// ========================================
+
+app.put("/api/farms/:id", (req, res) => {
+  try {
+    // ========================================
+    // 1. 수정할 농장 ID
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. 수정할 데이터
+    // ========================================
+
+    const { name, crop, area } = req.body || {};
+
+    // ========================================
+    // 3. 농장 이름 검사
+    // ========================================
+
+    if (typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "농장 이름을 입력해주세요.",
+      });
+    }
+
+    // ========================================
+    // 4. 데이터 정리
+    // ========================================
+
+    const farmName = name.trim();
+
+    const farmCrop = typeof crop === "string" ? crop.trim() : null;
+
+    const farmArea =
+      area === null || area === undefined || area === "" ? null : Number(area);
+
+    // ========================================
+    // 5. 면적 검증
+    // ========================================
+
+    if (farmArea !== null && (!Number.isFinite(farmArea) || farmArea < 0)) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 면적을 입력해주세요.",
+      });
+    }
+
+    // ========================================
+    // 6. SQLite 농장 정보 수정
+    // ========================================
+
+    const result = db
+      .prepare(
+        `
+        UPDATE farms
+        SET
+          name = ?,
+          crop = ?,
+          area = ?
+        WHERE id = ?
+      `,
+      )
+      .run(farmName, farmCrop, farmArea, farmId);
+
+    // ========================================
+    // 7. 수정 대상 확인
+    // ========================================
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "수정할 농장을 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 8. 수정 성공
+    // ========================================
+
+    console.log("🌱 농장 정보 수정 완료:", farmId);
+
+    res.json({
+      success: true,
+      message: "농장 정보가 수정되었습니다.",
+    });
+  } catch (error) {
+    console.error("농장 정보 수정 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "농장 정보를 수정하지 못했습니다.",
+    });
+  }
+});
+
+// ========================================
 // 8. 팜맵 WFS API 테스트
 // ========================================
 
