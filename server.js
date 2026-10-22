@@ -979,17 +979,36 @@ app.post("/api/farms/:id/diaries", (req, res) => {
       });
     }
 
-    if (typeof work_type !== "string" || !work_type.trim()) {
+    // ========================================
+    // 작업 종류 검증
+    // ========================================
+
+    if (
+      typeof work_type !== "string" ||
+      !work_type.trim() ||
+      work_type.trim().length > 50
+    ) {
       return res.status(400).json({
         success: false,
-        message: "작업 종류를 입력해주세요.",
+        message: "작업 종류는 1~50자로 입력해주세요.",
       });
     }
+
+    // ========================================
+    // 작업 내용 검증
+    // ========================================
 
     if (memo !== undefined && memo !== null && typeof memo !== "string") {
       return res.status(400).json({
         success: false,
         message: "작업 내용은 문자열이어야 합니다.",
+      });
+    }
+
+    if (typeof memo === "string" && memo.trim().length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: "작업 내용은 2000자 이하로 입력해주세요.",
       });
     }
 

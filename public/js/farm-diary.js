@@ -132,3 +132,239 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
     diaryList.textContent = "재배 일지를 불러오지 못했습니다.";
   }
 }
+
+// ========================================
+// 📖 재배 일지 작성 기능
+// ========================================
+
+let diaryFormInitialized = false;
+
+// ========================================
+// 1. 재배 일지 작성 폼 초기화
+// ========================================
+
+export function initFarmDiary(getFarmId) {
+  // 이벤트 중복 등록 방지
+  if (diaryFormInitialized) {
+    return;
+  }
+
+  // ========================================
+  // HTML 요소
+  // ========================================
+
+  const writeBtn = document.getElementById("diaryWriteBtn");
+
+  const form = document.getElementById("diaryForm");
+
+  const cancelBtn = document.getElementById("diaryCancelBtn");
+
+  const saveBtn = document.getElementById("diarySaveBtn");
+
+  const dateInput = document.getElementById("diaryWorkDate");
+
+  const typeInput = document.getElementById("diaryWorkType");
+
+  const memoInput = document.getElementById("diaryMemo");
+
+  if (
+    !writeBtn ||
+    !form ||
+    !cancelBtn ||
+    !saveBtn ||
+    !dateInput ||
+    !typeInput ||
+    !memoInput
+  ) {
+    console.error("재배 일지 작성 폼을 찾을 수 없습니다.");
+    return;
+  }
+
+  // ========================================
+  // 2. 작성 폼 닫기
+  // ========================================
+
+  function closeForm() {
+    form.reset();
+
+    form.hidden = true;
+
+    writeBtn.setAttribute("aria-expanded", "false");
+  }
+
+  // ========================================
+  // 3. 작성 버튼 클릭
+  // ========================================
+
+  writeBtn.addEventListener("click", () => {
+    // 이미 열려 있다면 닫기
+    if (!form.hidden) {
+      closeForm();
+      return;
+    }
+
+    // 입력 폼 표시
+    form.hidden = false;
+
+    writeBtn.setAttribute("aria-expanded", "true");
+
+    // ========================================
+    // 오늘 날짜 자동 입력
+    // ========================================
+
+    const today = new Date();
+
+    const year = today.getFullYear();
+
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+
+    const day = String(today.getDate()).padStart(2, "0");
+
+    dateInput.value = `${year}-${month}-${day}`;
+
+    dateInput.focus();
+
+    console.log("📖 재배 일지 작성 폼 열기");
+  });
+
+  // ========================================
+  // 4. 취소 버튼
+  // ========================================
+
+  cancelBtn.addEventListener("click", () => {
+    closeForm();
+  });
+
+  // ========================================
+  // 5. 재배 일지 저장
+  // ========================================
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    // ========================================
+    // 현재 농장 ID 가져오기
+    // ========================================
+
+    const farmId = Number(getFarmId());
+
+    if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+      alert("농장 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    // ========================================
+    // 입력 데이터
+    // ========================================
+
+    const work_date = dateInput.value;
+
+    const work_type = typeInput.value;
+
+    const memo = memoInput.value.trim();
+
+    if (!work_date || !work_type) {
+      alert("작업 날짜와 종류를 입력해주세요.");
+      return;
+    }
+
+    // ========================================
+    // 중복 저장 방지
+    // ========================================
+
+    saveBtn.disabled = true;
+
+    saveBtn.textContent = "저장 중...";
+
+    try {
+      // ========================================
+      // SQLite 저장 API 요청
+      // ========================================
+
+      const response = await fetch(`/api/farms/${farmId}/diaries`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          work_date,
+          work_type,
+          memo,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || "재배 일지 저장 실패");
+      }
+
+      console.log("📖 재배 일지 저장 완료:", result);
+
+      // ========================================
+      // 입력 폼 초기화
+      // ========================================
+
+      closeForm();
+
+      // ========================================
+      // 현재 농장 화면인지 확인
+      // ========================================
+
+      const stillCurrent =
+        Number(getFarmId()) === farmId &&
+        !document.getElementById("farmView").hidden;
+
+      if (stillCurrent) {
+        // ========================================
+        // 저장 후 재배 일지 목록 갱신
+        // ========================================
+
+        await loadFarmDiaries(
+          farmId,
+          () =>
+            Number(getFarmId()) === farmId &&
+            !document.getElementById("farmView").hidden,
+        );
+
+        alert("🌱 재배 일지가 저장되었습니다!");
+      }
+    } catch (error) {
+      console.error("재배 일지 저장 오류:", error);
+
+      if (Number(getFarmId()) === farmId) {
+        alert(error.message);
+      }
+    } finally {
+      saveBtn.disabled = false;
+
+      saveBtn.textContent = "💾 저장하기";
+    }
+  });
+
+  diaryFormInitialized = true;
+
+  console.log("📖 재배 일지 작성 기능 초기화 완료!");
+}
+
+// ========================================
+// 6. 재배 일지 입력 폼 초기화
+// ========================================
+
+export function resetFarmDiaryForm() {
+  const form = document.getElementById("diaryForm");
+
+  const writeBtn = document.getElementById("diaryWriteBtn");
+
+  if (!form || !writeBtn) {
+    return;
+  }
+
+  form.reset();
+
+  form.hidden = true;
+
+  writeBtn.setAttribute("aria-expanded", "false");
+}

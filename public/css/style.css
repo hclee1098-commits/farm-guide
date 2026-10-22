@@ -909,3 +909,175 @@ input:focus {
 
   overflow-wrap: anywhere;
 }
+
+/* ======================================== */
+/* 📖 재배 일지 작성 영역 */
+/* ======================================== */
+
+#farmView .diary-write-area {
+  margin-top: 20px;
+  margin-bottom: 25px;
+}
+
+/* ======================================== */
+/* 새 일지 작성 버튼 */
+/* ======================================== */
+
+#farmView .diary-write-btn {
+  background: #4caf50;
+
+  color: white;
+
+  border: none;
+  border-radius: 8px;
+
+  padding: 12px 20px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+#farmView .diary-write-btn:hover {
+  background: #388e3c;
+}
+
+/* ======================================== */
+/* 재배 일지 입력 폼 */
+/* ======================================== */
+
+#farmView .diary-form {
+  background: #f8fbf8;
+
+  border: 1px solid #dce8dc;
+  border-radius: 10px;
+
+  padding: 25px;
+
+  margin-top: 20px;
+}
+
+/* ======================================== */
+/* 입력 항목 */
+/* ======================================== */
+
+#farmView .diary-form-group {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+
+  margin-bottom: 20px;
+}
+
+/* 입력 항목 제목 */
+
+#farmView .diary-form-group label {
+  font-size: 14px;
+
+  font-weight: 600;
+
+  color: #333;
+}
+
+/* ======================================== */
+/* 입력창 공통 디자인 */
+/* ======================================== */
+
+#farmView .diary-form-group input,
+#farmView .diary-form-group select,
+#farmView .diary-form-group textarea {
+  width: 100%;
+
+  padding: 12px;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  background: white;
+
+  font-size: 14px;
+  font-family: inherit;
+
+  box-sizing: border-box;
+}
+
+/* 입력창 선택 효과 */
+
+#farmView .diary-form-group input:focus,
+#farmView .diary-form-group select:focus,
+#farmView .diary-form-group textarea:focus {
+  outline: none;
+
+  border-color: #4caf50;
+
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+/* ======================================== */
+/* 작업 내용 입력창 */
+/* ======================================== */
+
+#farmView .diary-form-group textarea {
+  resize: vertical;
+
+  min-height: 120px;
+
+  line-height: 1.6;
+}
+
+/* ======================================== */
+/* 저장 / 취소 버튼 */
+/* ======================================== */
+
+#farmView .diary-form-actions {
+  display: flex;
+
+  justify-content: flex-end;
+
+  gap: 10px;
+}
+
+/* 취소 버튼 */
+
+#farmView .diary-cancel-btn {
+  background: #eeeeee;
+
+  color: #444;
+
+  border: 1px solid #ccc;
+  border-radius: 8px;
+
+  padding: 12px 20px;
+
+  cursor: pointer;
+}
+
+/* 저장 버튼 */
+
+#farmView .diary-save-btn {
+  background: #4caf50;
+
+  color: white;
+
+  border: none;
+  border-radius: 8px;
+
+  padding: 12px 20px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+#farmView .diary-save-btn:hover {
+  background: #388e3c;
+}
+
+#farmView .diary-save-btn:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}

@@ -2,7 +2,11 @@
 // 📖 재배 일지 기능
 // ========================================
 
-import { loadFarmDiaries } from "./farm-diary.js";
+import {
+  loadFarmDiaries,
+  initFarmDiary,
+  resetFarmDiaryForm,
+} from "./farm-diary.js";
 
 // ========================================
 // 🌱 농사 가이드 - SPA 화면 관리
@@ -10,6 +14,12 @@ import { loadFarmDiaries } from "./farm-diary.js";
 
 // 네이버 지도 객체
 let map = null;
+
+// ========================================
+// 현재 SPA에서 관리 중인 농장 ID
+// ========================================
+
+let currentFarmId = null;
 
 // 이전 요청과 현재 요청 구분
 let requestId = 0;
@@ -22,6 +32,12 @@ export function initFarmView(mapController) {
   console.log("🌱 SPA 화면 관리 초기화");
 
   map = mapController.map;
+
+  // ========================================
+  // 📖 재배 일지 작성 기능 초기화
+  // ========================================
+
+  initFarmDiary(() => currentFarmId);
 
   // 메인으로 버튼
   const backBtn = document.getElementById("detailBackBtn");
@@ -72,6 +88,18 @@ export async function openFarmView(farmId, addHistory = true) {
     alert("올바른 농장 ID가 아닙니다.");
     return;
   }
+
+  // ========================================
+  // 현재 관리 중인 농장 ID 설정
+  // ========================================
+
+  currentFarmId = id;
+
+  // ========================================
+  // 이전 농장 재배 일지 입력 폼 초기화
+  // ========================================
+
+  resetFarmDiaryForm();
 
   const mapView = document.getElementById("mapView");
   const farmView = document.getElementById("farmView");
@@ -184,6 +212,15 @@ export function showMapView(addHistory = true) {
 
   // 진행 중인 상세 조회 결과 무시
   ++requestId;
+
+  // ========================================
+  // 현재 농장 선택 해제
+  // ========================================
+
+  currentFarmId = null;
+
+  // 재배 일지 작성 폼 초기화
+  resetFarmDiaryForm();
 
   const mapView = document.getElementById("mapView");
   const farmView = document.getElementById("farmView");
