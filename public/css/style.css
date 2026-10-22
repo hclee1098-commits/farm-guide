@@ -185,3 +185,54 @@ input:focus {
   background: #d32f2f;
   color: white;
 }
+
+/* ======================================== */
+/* 🌱 등록된 농장 지도 이동 버튼 */
+/* ======================================== */
+
+.farm-focus-btn {
+  display: block;
+
+  width: 100%;
+
+  margin-top: 15px;
+  margin-bottom: 10px;
+
+  padding: 12px;
+
+  border: 1px solid #2196f3;
+  border-radius: 8px;
+
+  background: #e3f2fd;
+  color: #1565c0;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+/* 마우스를 올렸을 때 */
+
+.farm-focus-btn:hover:not(:disabled) {
+  background: #2196f3;
+  color: white;
+}
+
+/* 클릭했을 때 */
+
+.farm-focus-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* UID가 없는 농장 */
+
+.farm-focus-btn:disabled {
+  background: #eeeeee;
+  border-color: #dddddd;
+  color: #999999;
+
+  cursor: not-allowed;
+}

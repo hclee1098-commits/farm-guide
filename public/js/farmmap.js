@@ -427,6 +427,55 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
       return true;
     }
 
+    // ========================================
+    // 🌱 UID로 등록된 농지 찾기
+    // ========================================
+
+    function focusFarmByUid(uid) {
+      // ========================================
+      // 1. UID 확인
+      // ========================================
+
+      const targetUid = String(uid ?? "").trim();
+
+      if (!targetUid) {
+        console.warn("농지 UID가 없습니다.");
+        return false;
+      }
+
+      console.log("🔎 UID로 농지 검색:", targetUid);
+
+      // ========================================
+      // 2. GeoJSON에서 UID 검색
+      // ========================================
+
+      const featureIndex = geojson.features.findIndex((feature) => {
+        const farmUid = String(feature.properties?.UID ?? "").trim();
+
+        return farmUid === targetUid;
+      });
+
+      // ========================================
+      // 3. 농지를 찾지 못한 경우
+      // ========================================
+
+      if (featureIndex === -1) {
+        console.warn("해당 UID의 농지를 찾을 수 없습니다.");
+
+        return false;
+      }
+
+      console.log("🌱 농지 발견!");
+
+      console.log("Feature Index:", featureIndex);
+
+      // ========================================
+      // 4. 기존 지도 이동 기능 사용
+      // ========================================
+
+      return focusFarm(featureIndex);
+    }
+
     console.log("🌱 팜맵 농지 경계 표시 완료!");
 
     // 외부에서 사용할 기능 반환
@@ -439,6 +488,9 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
 
       // 검색 농지로 이동
       focusFarm,
+
+      // UID로 농지 찾기
+      focusFarmByUid,
     };
   } catch (error) {
     console.error("팜맵 오류:", error);

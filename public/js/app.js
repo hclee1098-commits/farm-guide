@@ -346,6 +346,84 @@ async function loadFarms(mapController) {
       item.appendChild(pnu);
 
       // ========================================
+      // 📍 등록된 농장 지도에서 보기
+      // ========================================
+
+      // 지도 이동 버튼 생성
+      const focusBtn = document.createElement("button");
+
+      focusBtn.type = "button";
+      focusBtn.textContent = "📍 지도에서 보기";
+      focusBtn.className = "farm-focus-btn";
+
+      // ========================================
+      // 등록된 농지 UID 확인
+      // ========================================
+
+      const farmUid = String(farm.farm_uid ?? "").trim();
+
+      // UID가 없는 농장은 지도 이동 비활성화
+      if (!farmUid) {
+        focusBtn.disabled = true;
+        focusBtn.textContent = "📍 농지 UID 없음";
+        focusBtn.title = "농지 UID가 저장되지 않아 지도에서 찾을 수 없습니다.";
+      }
+
+      // ========================================
+      // 지도 이동 버튼 클릭
+      // ========================================
+
+      focusBtn.addEventListener("click", () => {
+        console.log("📍 등록된 농장 지도 이동:", farm.name);
+
+        console.log("농지 UID:", farmUid);
+
+        // ========================================
+        // 1. 팜맵 컨트롤러 확인
+        // ========================================
+
+        if (
+          !farmmapController ||
+          typeof farmmapController.focusFarmByUid !== "function"
+        ) {
+          alert("농지 지도 기능을 사용할 수 없습니다.");
+          return;
+        }
+
+        // ========================================
+        // 2. UID로 농지 검색 및 지도 이동
+        // ========================================
+
+        const success = farmmapController.focusFarmByUid(farmUid);
+
+        if (!success) {
+          alert("지도에서 해당 농지를 찾을 수 없습니다.");
+          return;
+        }
+
+        // ========================================
+        // 3. 지도 영역으로 화면 이동
+        // ========================================
+
+        const mapElement = document.getElementById("map");
+
+        if (mapElement) {
+          mapElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+
+        console.log("🌱 등록된 농장 지도 이동 완료!");
+      });
+
+      // ========================================
+      // 농장 카드에 버튼 추가
+      // ========================================
+
+      item.appendChild(focusBtn);
+
+      // ========================================
       // 농장 삭제 버튼
       // ========================================
 
