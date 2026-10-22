@@ -1,0 +1,105 @@
+/* ===================================== */
+/* 🌱 농지 검색 영역 */
+/* ===================================== */
+
+.farm-search-section {
+  background: #f8faf8;
+  border: 1px solid #e0e8e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* 검색 제목 */
+
+.farm-search-section h2 {
+  margin: 0 0 10px;
+  font-size: 19px;
+  color: #23834b;
+}
+
+/* 검색 설명 */
+
+.farm-search-description {
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 15px;
+}
+
+/* 검색 입력 영역 */
+
+.farm-search-form {
+  display: flex;
+  gap: 10px;
+}
+
+/* 검색 입력창 */
+
+#farmSearchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* 검색 버튼 */
+
+#farmSearchBtn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #23834b;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#farmSearchBtn:hover {
+  background: #196838;
+}
+
+/* 검색 결과 */
+
+.farm-search-results {
+  margin-top: 15px;
+}
+
+.farm-search-results:empty {
+  display: none;
+}
+
+/* 검색 결과 항목 */
+
+.farm-search-item {
+  background: white;
+  border: 1px solid #e0e8e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.farm-search-item:hover {
+  background: #e8f5e9;
+  border-color: #23834b;
+}
+
+/* 모바일 */
+
+@media (max-width: 600px) {
+  .farm-search-section {
+    padding: 15px;
+  }
+
+  .farm-search-form {
+    flex-direction: column;
+  }
+
+  #farmSearchBtn {
+    width: 100%;
+  }
+}

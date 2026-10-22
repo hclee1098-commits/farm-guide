@@ -15,6 +15,9 @@
 
     <!-- 농지 정보 CSS -->
     <link rel="stylesheet" href="/css/farm-info.css" />
+
+    <!-- 농지 검색 디자인 -->
+    <link rel="stylesheet" href="/css/farm-search.css" />
   </head>
 
   <body>
@@ -34,6 +37,37 @@
 
       <section class="card">
         <h2>📍 농장 위치</h2>
+
+        <!-- ===================================== -->
+        <!-- 농지 주소 검색 -->
+        <!-- ===================================== -->
+
+        <section class="farm-search-section">
+          <h2>🔎 농지 주소 검색</h2>
+
+          <p class="farm-search-description">
+            주소, 지번 또는 PNU로 농지를 검색할 수 있습니다.
+          </p>
+
+          <form id="farmSearchForm" class="farm-search-form">
+            <input
+              type="search"
+              id="farmSearchInput"
+              placeholder="예: 영양군 석보면 홍계리 351-1"
+              aria-label="농지 주소 검색"
+              autocomplete="off"
+            />
+
+            <button type="submit" id="farmSearchBtn">🔍 검색</button>
+          </form>
+
+          <!-- 검색 결과 -->
+          <div
+            id="farmSearchResults"
+            class="farm-search-results"
+            aria-live="polite"
+          ></div>
+        </section>
 
         <div id="map"></div>
 

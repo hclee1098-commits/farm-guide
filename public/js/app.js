@@ -468,6 +468,23 @@ function initFarmTabs() {
 }
 
 // ========================================
+// 🔎 농지 검색 폼 기본 제출 방지
+// ========================================
+
+const farmSearchForm = document.getElementById("farmSearchForm");
+
+if (farmSearchForm) {
+  farmSearchForm.addEventListener("submit", (event) => {
+    // 페이지 새로고침 방지
+    event.preventDefault();
+
+    console.log("🔎 농지 검색 버튼 클릭");
+
+    // 실제 검색 기능은 다음 단계에서 연결
+  });
+}
+
+// ========================================
 // 4. 앱 실행
 // ========================================
 
