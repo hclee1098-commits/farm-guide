@@ -10,6 +10,9 @@ import { createMap } from "./map.js";
 // 팜맵 농지 경계 기능
 import { loadFarmFields } from "./farmmap.js";
 
+// 농지 검색 기능
+import { initFarmSearch } from "./farm-search.js";
+
 // ========================================
 // 팜맵 컨트롤러 관리
 // ========================================
@@ -115,6 +118,14 @@ async function initApp() {
     // 등록된 농장 목록 전달
     registeredFarms ?? [],
   );
+
+  // ========================================
+  // 🔎 농지 검색 기능 초기화
+  // ========================================
+
+  if (farmmapController) {
+    initFarmSearch(farmmapController);
+  }
 
   // ========================================
   // 5. 농장 등록 기능 연결
@@ -471,18 +482,18 @@ function initFarmTabs() {
 // 🔎 농지 검색 폼 기본 제출 방지
 // ========================================
 
-const farmSearchForm = document.getElementById("farmSearchForm");
+// const farmSearchForm = document.getElementById("farmSearchForm");
 
-if (farmSearchForm) {
-  farmSearchForm.addEventListener("submit", (event) => {
-    // 페이지 새로고침 방지
-    event.preventDefault();
+// if (farmSearchForm) {
+//   farmSearchForm.addEventListener("submit", (event) => {
+//     // 페이지 새로고침 방지
+//     event.preventDefault();
 
-    console.log("🔎 농지 검색 버튼 클릭");
+//     console.log("🔎 농지 검색 버튼 클릭");
 
-    // 실제 검색 기능은 다음 단계에서 연결
-  });
-}
+//     // 실제 검색 기능은 다음 단계에서 연결
+//   });
+// }
 
 // ========================================
 // 4. 앱 실행

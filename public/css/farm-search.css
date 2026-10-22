@@ -103,3 +103,86 @@
     width: 100%;
   }
 }
+
+/* ======================================== */
+/* 농지 검색 결과 */
+/* ======================================== */
+
+.farm-search-results {
+  margin-top: 15px;
+}
+
+/* 검색 결과 개수 */
+
+.farm-search-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: #23834b;
+  margin-bottom: 12px;
+}
+
+/* 검색 결과 항목 */
+
+.farm-search-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  width: 100%;
+  padding: 15px;
+  margin-bottom: 10px;
+
+  background: #ffffff;
+
+  border: 1px solid #dce8dc;
+  border-radius: 10px;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+/* 마우스 올렸을 때 */
+
+.farm-search-item:hover {
+  background: #f0f8f0;
+  border-color: #23834b;
+}
+
+/* 선택된 검색 결과 */
+
+.farm-search-item.selected {
+  background: #fff3e0;
+  border-color: #ff9800;
+}
+
+/* 농지 주소 */
+
+.farm-search-item strong {
+  font-size: 15px;
+  color: #263b2d;
+}
+
+/* 농지 정보 */
+
+.farm-search-item span {
+  font-size: 13px;
+  color: #555;
+}
+
+/* PNU 및 UID */
+
+.farm-search-item small {
+  font-size: 12px;
+  color: #888;
+  overflow-wrap: anywhere;
+}
+
+/* 검색 결과 안내 */
+
+.farm-search-notice {
+  font-size: 13px;
+  color: #777;
+  padding: 10px;
+}

@@ -2,7 +2,7 @@
 // 🌱 농사 가이드 - 팜맵 농지 경계 관리
 // ========================================
 
-import { showFarmInfo } from "./farm-info.js";
+import { showFarmInfo, getFarmAddress } from "./farm-info.js";
 
 // ========================================
 // 1. 농지 색상 설정
@@ -126,7 +126,7 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
     // 7. 농지 폴리곤 생성
     // ========================================
 
-    function drawPolygon(rings, properties) {
+    function drawPolygon(rings, properties, featureIndex) {
       const paths = rings.map(convertRing);
 
       // ========================================
@@ -156,7 +156,8 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
       polygons.push({
         polygon,
         pnu,
-        uid,
+        properties,
+        featureIndex,
       });
 
       // ========================================
@@ -197,7 +198,7 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
     // 9. GeoJSON 농지 순회
     // ========================================
 
-    geojson.features.forEach((feature) => {
+    geojson.features.forEach((feature, featureIndex) => {
       const geometry = feature.geometry;
 
       if (!geometry) {
@@ -207,12 +208,12 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
       const properties = feature.properties || {};
 
       if (geometry.type === "Polygon") {
-        drawPolygon(geometry.coordinates, properties);
+        drawPolygon(geometry.coordinates, properties, featureIndex);
       }
 
       if (geometry.type === "MultiPolygon") {
         geometry.coordinates.forEach((rings) => {
-          drawPolygon(rings, properties);
+          drawPolygon(rings, properties, featureIndex);
         });
       }
     });
@@ -272,12 +273,172 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
       selectedPolygon = null;
     }
 
+    // ========================================
+    // 🔎 농지 주소 / PNU / UID 검색
+    // ========================================
+
+    function searchFarms(keyword) {
+      const query = String(keyword ?? "").trim();
+
+      if (!query) {
+        return [];
+      }
+
+      // 검색어를 공백 기준으로 분리
+      const searchWords = query.toLowerCase().split(/\s+/).filter(Boolean);
+
+      const results = [];
+
+      geojson.features.forEach((feature, featureIndex) => {
+        const properties = feature.properties || {};
+
+        // 농지 상세 주소
+        const address = getFarmAddress(properties);
+
+        // PNU
+        const pnu = String(properties.PNU ?? "").trim();
+
+        // UID
+        const uid = String(properties.UID ?? "").trim();
+
+        // 검색 대상 문자열
+        const searchText = [address, properties.STDG_ADDR, pnu, uid]
+          .join(" ")
+          .toLowerCase()
+          .replace(/\s+/g, "");
+
+        // 검색어의 모든 단어가 포함되는지 확인
+        const matched = searchWords.every((word) => searchText.includes(word));
+
+        if (!matched) {
+          return;
+        }
+
+        results.push({
+          featureIndex,
+          uid,
+          pnu,
+          address,
+          area: properties.AREA,
+          type: properties.CLSF_NM,
+        });
+      });
+
+      console.log("🔎 농지 검색 결과:", results.length);
+
+      return results;
+    }
+
+    // ========================================
+    // 📍 검색한 농지로 지도 이동
+    // ========================================
+
+    function focusFarm(featureIndex) {
+      const feature = geojson.features[featureIndex];
+
+      if (!feature || !feature.geometry) {
+        return false;
+      }
+
+      // 검색한 농지에 해당하는 폴리곤 찾기
+      const targets = polygons.filter(
+        (item) => item.featureIndex === featureIndex,
+      );
+
+      if (targets.length === 0) {
+        return false;
+      }
+
+      const properties = feature.properties || {};
+
+      // 기존 선택 농지 색상 복구
+      if (selectedPolygon) {
+        applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.pnu);
+      }
+
+      // 검색된 농지 선택
+      const target = targets[0];
+
+      selectedPolygon = {
+        polygon: target.polygon,
+        pnu: target.pnu,
+      };
+
+      // 선택 농지 주황색 강조
+      target.polygon.setOptions(FARM_COLORS.selected);
+
+      // ========================================
+      // 농지 경계 좌표 범위 계산
+      // ========================================
+
+      let minLat = Infinity;
+      let maxLat = -Infinity;
+      let minLng = Infinity;
+      let maxLng = -Infinity;
+
+      function scanCoordinates(coordinates) {
+        if (
+          Array.isArray(coordinates) &&
+          typeof coordinates[0] === "number" &&
+          typeof coordinates[1] === "number"
+        ) {
+          const [lng, lat] = coordinates;
+
+          minLat = Math.min(minLat, lat);
+          maxLat = Math.max(maxLat, lat);
+          minLng = Math.min(minLng, lng);
+          maxLng = Math.max(maxLng, lng);
+
+          return;
+        }
+
+        if (Array.isArray(coordinates)) {
+          coordinates.forEach(scanCoordinates);
+        }
+      }
+
+      scanCoordinates(feature.geometry.coordinates);
+
+      if (!Number.isFinite(minLat)) {
+        return false;
+      }
+
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(minLat, minLng),
+        new naver.maps.LatLng(maxLat, maxLng),
+      );
+
+      // ========================================
+      // 기존 지도 이동
+      // ========================================
+
+      map.fitBounds(bounds);
+
+      // 농지 정보 표시
+      showFarmInfo(properties);
+
+      // 기존 농지 선택 콜백 실행
+      if (typeof onFarmSelect === "function") {
+        onFarmSelect(properties, bounds.getCenter());
+      }
+
+      console.log("📍 검색 농지로 이동 완료:", properties);
+
+      return true;
+    }
+
     console.log("🌱 팜맵 농지 경계 표시 완료!");
 
     // 외부에서 사용할 기능 반환
     return {
       setRegisteredFarms,
       clearSelection,
+
+      // 농지 검색
+      searchFarms,
+
+      // 검색 농지로 이동
+      focusFarm,
     };
   } catch (error) {
     console.error("팜맵 오류:", error);

@@ -1,0 +1,157 @@
+// ========================================
+// 🌱 농사 가이드 - 농지 검색 기능
+// ========================================
+
+export function initFarmSearch(farmmapController) {
+  console.log("🔎 농지 검색 기능 초기화");
+
+  const searchForm = document.getElementById("farmSearchForm");
+  const searchInput = document.getElementById("farmSearchInput");
+
+  if (!searchForm || !searchInput) {
+    console.error("농지 검색창을 찾을 수 없습니다.");
+    return;
+  }
+
+  if (!farmmapController) {
+    console.error("팜맵 컨트롤러가 없습니다.");
+    return;
+  }
+
+  // ========================================
+  // 검색 결과 영역 생성
+  // ========================================
+
+  let resultBox = document.getElementById("farmSearchResults");
+
+  if (!resultBox) {
+    resultBox = document.createElement("div");
+    resultBox.id = "farmSearchResults";
+    resultBox.className = "farm-search-results";
+
+    searchForm.insertAdjacentElement("afterend", resultBox);
+  }
+
+  // ========================================
+  // 검색 버튼 클릭
+  // ========================================
+
+  searchForm.addEventListener("submit", (event) => {
+    // 페이지 새로고침 방지
+    event.preventDefault();
+
+    const keyword = searchInput.value.trim();
+
+    resultBox.replaceChildren();
+
+    if (!keyword) {
+      resultBox.textContent = "검색할 농지 주소를 입력해주세요.";
+      return;
+    }
+
+    console.log("🔎 농지 검색:", keyword);
+
+    // ========================================
+    // 팜맵 데이터 검색
+    // ========================================
+
+    const results = farmmapController.searchFarms(keyword);
+
+    if (results.length === 0) {
+      resultBox.textContent =
+        "검색 결과가 없습니다. 주소 또는 지번을 확인해주세요.";
+
+      return;
+    }
+
+    // ========================================
+    // 검색 결과 개수 표시
+    // ========================================
+
+    const resultCount = document.createElement("p");
+
+    resultCount.className = "farm-search-count";
+
+    resultCount.textContent = `🌱 검색된 농지: ${results.length}개`;
+
+    resultBox.appendChild(resultCount);
+
+    // 한 번에 최대 30개 표시
+    const visibleResults = results.slice(0, 30);
+
+    // ========================================
+    // 검색 결과 목록 생성
+    // ========================================
+
+    visibleResults.forEach((farm) => {
+      const item = document.createElement("button");
+
+      item.type = "button";
+      item.className = "farm-search-item";
+
+      const address = document.createElement("strong");
+
+      address.textContent = farm.address;
+
+      const detail = document.createElement("span");
+
+      const area = Number(farm.area);
+
+      const areaText = Number.isFinite(area)
+        ? `${area.toLocaleString("ko-KR")}㎡`
+        : "면적 정보 없음";
+
+      detail.textContent = `${farm.type || "농지"} · ${areaText}`;
+
+      const pnu = document.createElement("small");
+
+      pnu.textContent = `PNU: ${farm.pnu || "-"}`;
+
+      const uid = document.createElement("small");
+
+      uid.textContent = `UID: ${farm.uid || "-"}`;
+
+      item.appendChild(address);
+      item.appendChild(detail);
+      item.appendChild(pnu);
+      item.appendChild(uid);
+
+      // ========================================
+      // 검색 결과 클릭
+      // ========================================
+
+      item.addEventListener("click", () => {
+        console.log("📍 검색 농지 선택:", farm);
+
+        const success = farmmapController.focusFarm(farm.featureIndex);
+
+        if (!success) {
+          alert("농지 위치를 찾을 수 없습니다.");
+          return;
+        }
+
+        // 선택 결과 표시
+        resultBox.querySelectorAll(".farm-search-item").forEach((button) => {
+          button.classList.remove("selected");
+        });
+
+        item.classList.add("selected");
+      });
+
+      resultBox.appendChild(item);
+    });
+
+    if (results.length > 30) {
+      const notice = document.createElement("p");
+
+      notice.className = "farm-search-notice";
+
+      notice.textContent =
+        "검색 결과가 많아 처음 30개만 표시했습니다. 주소를 더 자세히 입력해주세요.";
+
+      resultBox.appendChild(notice);
+    }
+  });
+
+  console.log("🔎 농지 검색 기능 준비 완료!");
+}
