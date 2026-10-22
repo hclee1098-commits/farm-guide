@@ -82,6 +82,9 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
 
     let selectedPolygon = null;
 
+    // 폴리곤 클릭과 지도 클릭 이벤트 구분
+    let polygonClickHandled = false;
+
     let minLat = Infinity;
     let maxLat = -Infinity;
     let minLng = Infinity;
@@ -152,9 +155,14 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
       // UID 기준 색상 적용
       applyPolygonStyle(polygon, uid);
 
+      // ========================================
       // 폴리곤 정보 저장
+      // UID 기반 농지 관리
+      // ========================================
+
       polygons.push({
         polygon,
+        uid,
         pnu,
         properties,
         featureIndex,
@@ -165,6 +173,17 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
       // ========================================
 
       naver.maps.Event.addListener(polygon, "click", (event) => {
+        // ========================================
+        // 폴리곤 클릭 이벤트 표시
+        // ========================================
+
+        polygonClickHandled = true;
+
+        // 현재 클릭 이벤트 처리가 끝나면 초기화
+        setTimeout(() => {
+          polygonClickHandled = false;
+        }, 0);
+
         console.log("선택한 농지:", properties);
 
         // 이전 농지 색상 복구
@@ -274,6 +293,36 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
     }
 
     // ========================================
+    // 🌱 지도 빈 영역 클릭 이벤트
+    // ========================================
+
+    naver.maps.Event.addListener(map, "click", () => {
+      // ========================================
+      // 1. 농지 폴리곤 클릭이면 무시
+      // ========================================
+
+      if (polygonClickHandled) {
+        return;
+      }
+
+      console.log("📍 지도 빈 영역 클릭");
+
+      // ========================================
+      // 2. 현재 농지 선택 해제
+      // ========================================
+
+      clearSelection();
+
+      // ========================================
+      // 3. 외부 콜백 실행
+      // ========================================
+
+      if (typeof onMapBackgroundClick === "function") {
+        onMapBackgroundClick();
+      }
+    });
+
+    // ========================================
     // 🔎 농지 주소 / PNU / UID 검색
     // ========================================
 
@@ -351,16 +400,25 @@ export async function loadFarmFields(map, onFarmSelect, registeredFarms = []) {
 
       const properties = feature.properties || {};
 
-      // 기존 선택 농지 색상 복구
+      // ========================================
+      // 이전 선택 농지 색상 복원
+      // UID 기준
+      // ========================================
+
       if (selectedPolygon) {
-        applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.pnu);
+        applyPolygonStyle(selectedPolygon.polygon, selectedPolygon.uid);
       }
 
       // 검색된 농지 선택
       const target = targets[0];
 
+      // ========================================
+      // 현재 선택 농지 저장
+      // ========================================
+
       selectedPolygon = {
         polygon: target.polygon,
+        uid: target.uid,
         pnu: target.pnu,
       };
 

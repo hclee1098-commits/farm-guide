@@ -74,6 +74,17 @@ async function initApp() {
   const farmPopup = createFarmPopup(mapController.map);
 
   // ========================================
+  // 🌱 지도 빈 영역 클릭 시 팝업 닫기
+  // ========================================
+
+  naver.maps.Event.addListener(mapController.map, "click", () => {
+    // 농지 정보 팝업 닫기
+    farmPopup.close();
+
+    console.log("🌱 지도 클릭 - 농지 팝업 닫기");
+  });
+
+  // ========================================
   // 3. 저장된 농장 목록 불러오기
   // ========================================
 
@@ -136,8 +147,43 @@ async function initApp() {
       }
     },
 
+    // ========================================
     // 등록된 농장 목록 전달
+    // ========================================
+
     registeredFarms ?? [],
+
+    // ========================================
+    // 지도 빈 영역 클릭 콜백
+    // ========================================
+
+    () => {
+      console.log("🌱 농지 선택 해제");
+
+      // 농지 정보 팝업 닫기
+      farmPopup.close();
+
+      // 선택한 농지 UID 초기화
+      selectedFarmUid = null;
+
+      // 선택한 농지 PNU 초기화
+      selectedFarmPnu = null;
+
+      // 농지 주소 입력 초기화
+      document.getElementById("farmAddressInput").value = "";
+
+      // PNU 입력 초기화
+      document.getElementById("farmPnuInput").value = "";
+
+      // 선택한 농지 면적 초기화
+      document.getElementById("farmArea").value = "";
+
+      // 농지 상세 정보 숨기기
+      document.getElementById("farmInfoContent").style.display = "none";
+
+      // 농지 선택 안내 표시
+      document.getElementById("farmEmptyMessage").style.display = "block";
+    },
   );
 
   // // ========================================
