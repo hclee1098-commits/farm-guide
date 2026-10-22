@@ -52,19 +52,25 @@ export function showFarmInfo(properties) {
   // 농지 종류
   document.getElementById("farmType").textContent = properties.CLSF_NM || "-";
 
-  // 농지 면적
-  const area =
-    properties.AREA == null || properties.AREA === ""
-      ? NaN
-      : Number(properties.AREA);
+  // ========================================
+  // 🌱 농지 면적 표시
+  // 팜맵 원본 면적의 소수 자릿수 유지
+  // ========================================
 
-  document.getElementById("selectedFarmArea").textContent = Number.isFinite(
-    area,
-  )
-    ? area.toLocaleString("ko-KR", {
-        maximumFractionDigits: 2,
-      }) + "㎡"
-    : "-";
+  const rawArea = properties.AREA;
+
+  const area =
+    rawArea === null || rawArea === undefined || rawArea === ""
+      ? NaN
+      : Number(rawArea);
+
+  document.getElementById("selectedFarmArea").textContent =
+    Number.isFinite(area) && area >= 0
+      ? `${area.toLocaleString("ko-KR", {
+          useGrouping: true,
+          maximumFractionDigits: 20,
+        })}㎡`
+      : "-";
 
   // 농지 고유번호
   document.getElementById("farmUid").textContent = properties.UID || "-";

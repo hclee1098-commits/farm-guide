@@ -236,3 +236,70 @@ input:focus {
 
   cursor: not-allowed;
 }
+
+/* ======================================== */
+/* 🌱 지도와 등록 농장 목록 선택 상태 연동 */
+/* ======================================== */
+
+/* 기본 농장 카드 */
+
+.farm-item {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* ======================================== */
+/* 현재 선택한 농장 */
+/* ======================================== */
+
+.farm-item.is-selected {
+  background: #e3f2fd;
+
+  border: 2px solid #2196f3;
+
+  box-shadow: 0 4px 14px rgba(33, 150, 243, 0.15);
+}
+
+/* 선택한 농장 제목 */
+
+.farm-item.is-selected h3 {
+  color: #1565c0;
+}
+
+/* ======================================== */
+/* 현재 선택한 농장 표시 */
+/* ======================================== */
+
+.farm-item.is-selected::before {
+  content: "✅ 현재 선택한 농장";
+
+  display: block;
+
+  margin-bottom: 12px;
+
+  padding: 7px 10px;
+
+  background: #bbdefb;
+  color: #0d47a1;
+
+  border-radius: 6px;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ======================================== */
+/* 모바일 */
+/* ======================================== */
+
+@media (max-width: 600px) {
+  .farm-item.is-selected {
+    border-width: 2px;
+  }
+
+  .farm-item.is-selected::before {
+    font-size: 11px;
+  }
+}

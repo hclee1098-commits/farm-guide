@@ -33,6 +33,41 @@ let selectedFarmUid = null;
 let selectedFarmPnu = null;
 
 // ========================================
+// 🌱 지도와 농장 목록 선택 상태 연동
+// ========================================
+
+function updateFarmListSelection() {
+  // ========================================
+  // 1. 등록된 농장 카드 가져오기
+  // ========================================
+
+  const farmItems = document.querySelectorAll(".farm-item[data-farm-uid]");
+
+  // ========================================
+  // 2. 현재 선택된 UID 확인
+  // ========================================
+
+  const currentUid = String(selectedFarmUid ?? "").trim();
+
+  // ========================================
+  // 3. 농장 카드 선택 상태 변경
+  // ========================================
+
+  farmItems.forEach((item) => {
+    const farmUid = String(item.dataset.farmUid ?? "").trim();
+
+    // UID가 동일한 농장인지 확인
+    const isSelected =
+      currentUid !== "" && farmUid !== "" && currentUid === farmUid;
+
+    // 선택한 농장 강조
+    item.classList.toggle("is-selected", isSelected);
+  });
+
+  console.log("🌱 농장 목록 선택 상태 갱신:", currentUid);
+}
+
+// ========================================
 // 🌱 농사 가이드 앱 초기화
 // ========================================
 
@@ -110,6 +145,12 @@ async function initApp() {
           ? null
           : String(properties.UID).trim() || null;
 
+      // ========================================
+      // 🌱 등록된 농장 목록 선택 상태 갱신
+      // ========================================
+
+      updateFarmListSelection();
+
       // 선택한 농지 PNU 저장
       selectedFarmPnu = String(properties.PNU ?? "").trim();
 
@@ -168,6 +209,12 @@ async function initApp() {
 
       // 선택한 농지 PNU 초기화
       selectedFarmPnu = null;
+
+      // ========================================
+      // 🌱 농장 목록 선택 상태 해제
+      // ========================================
+
+      updateFarmListSelection();
 
       // 농지 주소 입력 초기화
       document.getElementById("farmAddressInput").value = "";
@@ -299,6 +346,8 @@ function initFarmForm(mapController, farmmapController, farmPopup) {
       selectedFarmUid = null;
       selectedFarmPnu = null;
 
+      updateFarmListSelection();
+
       // 선택 위치 마커 제거
       mapController.resetSelectedLocation();
 
@@ -354,8 +403,19 @@ async function loadFarms(mapController) {
 
     // 농장 목록 생성
     farms.forEach((farm) => {
+      // ========================================
+      // 농장 카드 생성
+      // ========================================
+
       const item = document.createElement("div");
+
       item.className = "farm-item";
+
+      // ========================================
+      // 🌱 농장 UID 연결
+      // ========================================
+
+      item.dataset.farmUid = String(farm.farm_uid ?? "").trim();
 
       // 농장 이름
       const title = document.createElement("h3");
@@ -546,6 +606,12 @@ async function loadFarms(mapController) {
 
       farmList.appendChild(item);
     });
+
+    // ========================================
+    // 🌱 농장 목록 선택 상태 갱신
+    // ========================================
+
+    updateFarmListSelection();
 
     // 조회한 농장 목록 반환
     return farms;
