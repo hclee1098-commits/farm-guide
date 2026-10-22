@@ -1,4 +1,10 @@
 // ========================================
+// 📖 재배 일지 기능
+// ========================================
+
+import { loadFarmDiaries } from "./farm-diary.js";
+
+// ========================================
 // 🌱 농사 가이드 - SPA 화면 관리
 // ========================================
 
@@ -95,6 +101,13 @@ export async function openFarmView(farmId, addHistory = true) {
   document.getElementById("detailFarmName").textContent =
     "농장 정보 불러오는 중...";
 
+  // ========================================
+  // 이전 농장의 재배 일지 초기화
+  // ========================================
+
+  document.getElementById("detailDiaryList").textContent =
+    "📖 재배 일지를 불러오는 중...";
+
   document.getElementById("detailStatus").textContent =
     "농장 정보를 조회하고 있습니다.";
 
@@ -129,12 +142,25 @@ export async function openFarmView(farmId, addHistory = true) {
 
     document.getElementById("detailFarmPnu").textContent = farm.pnu || "미입력";
 
+    // ========================================
+    // 농지 UID 표시
+    // ========================================
+
     document.getElementById("detailFarmUid").textContent =
       farm.farm_uid || "미입력";
 
+    // 농장 정보 로딩 완료
     document.getElementById("detailStatus").textContent = "";
 
     console.log("🌱 농장 정보 로딩 완료:", farm);
+
+    // ========================================
+    // 📖 해당 농장의 재배 일지 조회
+    // ========================================
+
+    await loadFarmDiaries(id, () => currentRequest === requestId);
+
+    console.log("📖 재배 일지 조회 처리 완료!");
   } catch (error) {
     if (currentRequest !== requestId) {
       return;

@@ -794,3 +794,118 @@ input:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* ======================================== */
+/* 🌱 SPA 농장 관리 메뉴 */
+/* ======================================== */
+
+#farmView .farm-management-tabs {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+/* 관리 메뉴 버튼 */
+
+#farmView .management-tab {
+  padding: 12px 18px;
+
+  background: #f5f5f5;
+
+  color: #444;
+
+  border: 1px solid #ddd;
+
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+/* 선택된 메뉴 */
+
+#farmView .management-tab.active {
+  background: #e8f5e9;
+
+  color: #2e7d32;
+
+  border-color: #81c784;
+}
+
+/* 비활성화 메뉴 */
+
+#farmView .management-tab:disabled {
+  background: #f5f5f5;
+
+  color: #aaa;
+
+  cursor: not-allowed;
+
+  opacity: 0.6;
+}
+
+/* ======================================== */
+/* 📖 재배 일지 목록 */
+/* ======================================== */
+
+#farmView .diary-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+
+  margin-top: 20px;
+}
+
+/* 재배 일지 카드 */
+
+#farmView .diary-item {
+  background: #f8fbf8;
+
+  border: 1px solid #dce8dc;
+
+  border-radius: 10px;
+
+  padding: 20px;
+
+  transition: box-shadow 0.2s;
+}
+
+/* 마우스 효과 */
+
+#farmView .diary-item:hover {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* 작업 제목 */
+
+#farmView .diary-item h3 {
+  margin: 0 0 12px;
+
+  color: #2e7d32;
+
+  font-size: 16px;
+}
+
+/* 작업 내용 */
+
+#farmView .diary-item p {
+  margin: 0;
+
+  color: #555;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+
+  white-space: pre-wrap;
+
+  overflow-wrap: anywhere;
+}

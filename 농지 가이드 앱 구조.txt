@@ -1,31 +1,31 @@
-
-
 farm-guide/
 │
 ├── server.js
+├── farm-guide.db
 │
 └── public/
     │
     ├── index.html
-    │
-    ├── farm.html              ⭐ 새로 생성
+    ├── farm.html
     │
     ├── css/
     │   ├── style.css
     │   ├── map.css
     │   ├── farm-info.css
     │   ├── farm-search.css
-    │   └── farm.css           ⭐ 새로 생성
+    │   └── farm-diary.css       ⭐ 추가 예정
     │
     └── js/
         ├── app.js
         ├── map.js
         ├── farmmap.js
-        ├── farm-info.js
         ├── farm-search.js
-        └── farm.js            ⭐ 새로 생성
-		
-		
+        ├── farm-info.js
+        │
+        ├── farm-view.js        ← SPA 화면 관리
+        ├── farm-diary.js       ⭐ 추가 예정
+        │
+        └── farm.js             ← 기존 파일 임시 유지
 		
 
 🌱 앱 실행
