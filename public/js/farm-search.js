@@ -2,7 +2,7 @@
 // 🌱 농사 가이드 - 농지 검색 기능
 // ========================================
 
-export function initFarmSearch(farmmapController) {
+export function initFarmSearch(getFarmmapController) {
   console.log("🔎 농지 검색 기능 초기화");
 
   const searchForm = document.getElementById("farmSearchForm");
@@ -13,10 +13,10 @@ export function initFarmSearch(farmmapController) {
     return;
   }
 
-  if (!farmmapController) {
-    console.error("팜맵 컨트롤러가 없습니다.");
-    return;
-  }
+  // if (!farmmapController) {
+  //   console.error("팜맵 컨트롤러가 없습니다.");
+  //   return;
+  // }   >>검색창 이벤트를 등록하는 시점에는 팜맵 컨트롤러가 아직 없을 수 있기 때문에 삭제
 
   // ========================================
   // 검색 결과 영역 생성
@@ -55,8 +55,30 @@ export function initFarmSearch(farmmapController) {
     // 팜맵 데이터 검색
     // ========================================
 
-    const results = farmmapController.searchFarms(keyword);
+    // ========================================
+    // 팜맵 컨트롤러 확인
+    // ========================================
 
+    const farmmapController = getFarmmapController();
+
+    if (
+      !farmmapController ||
+      typeof farmmapController.searchFarms !== "function" ||
+      typeof farmmapController.focusFarm !== "function"
+    ) {
+      console.error("팜맵 검색 기능을 사용할 수 없습니다.");
+
+      resultBox.textContent =
+        "농지 데이터를 아직 불러오지 못했습니다. 잠시 후 다시 시도해주세요.";
+
+      return;
+    }
+
+    // ========================================
+    // 팜맵 데이터 검색
+    // ========================================
+
+    const results = farmmapController.searchFarms(keyword);
     if (results.length === 0) {
       resultBox.textContent =
         "검색 결과가 없습니다. 주소 또는 지번을 확인해주세요.";

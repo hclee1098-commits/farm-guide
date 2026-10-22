@@ -36,6 +36,12 @@ let selectedFarmPnu = null;
 async function initApp() {
   console.log("🌱 농사 가이드 앱 초기화 시작!");
 
+  // ========================================
+  // 🔎 농지 검색 이벤트 먼저 등록
+  // ========================================
+
+  initFarmSearch(() => farmmapController);
+
   // 네이버 지도 API 확인
   if (!window.naver || !window.naver.maps) {
     console.error("네이버 지도 API 로딩 실패");
@@ -119,13 +125,13 @@ async function initApp() {
     registeredFarms ?? [],
   );
 
-  // ========================================
-  // 🔎 농지 검색 기능 초기화
-  // ========================================
+  // // ========================================
+  // // 🔎 농지 검색 기능 초기화
+  // // ========================================
 
-  if (farmmapController) {
-    initFarmSearch(farmmapController);
-  }
+  // if (farmmapController) {
+  //   initFarmSearch(farmmapController);
+  // }
 
   // ========================================
   // 5. 농장 등록 기능 연결
