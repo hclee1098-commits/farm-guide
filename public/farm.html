@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>농장 관리 - 농사 가이드</title>
+
+    <!-- 농장 상세 화면 CSS -->
+    <link rel="stylesheet" href="/css/farm.css" />
+  </head>
+
+  <body>
+    <!-- ======================================== -->
+    <!-- 🌱 상단 헤더 -->
+    <!-- ======================================== -->
+
+    <header class="farm-header">
+      <div class="farm-header-inner">
+        <h1>🌱 농사 가이드</h1>
+
+        <a href="/" class="home-btn"> 🏠 메인으로 </a>
+      </div>
+    </header>
+
+    <!-- ======================================== -->
+    <!-- 🌱 농장 상세 관리 화면 -->
+    <!-- ======================================== -->
+
+    <main class="farm-container">
+      <!-- ======================================== -->
+      <!-- 1. 농장 기본 정보 -->
+      <!-- ======================================== -->
+
+      <section class="farm-card">
+        <div class="farm-title-area">
+          <h2 id="farmName">농장 정보 불러오는 중...</h2>
+
+          <span class="farm-status"> 🌿 등록된 농장 </span>
+        </div>
+
+        <div class="farm-detail-grid">
+          <div class="farm-detail-item">
+            <span>🌱 재배 작물</span>
+            <strong id="farmCrop">-</strong>
+          </div>
+
+          <div class="farm-detail-item">
+            <span>📐 농장 면적</span>
+            <strong id="farmArea">-</strong>
+          </div>
+
+          <div class="farm-detail-item full">
+            <span>📍 농지 주소</span>
+            <strong id="farmAddress">-</strong>
+          </div>
+
+          <div class="farm-detail-item">
+            <span>🏷️ PNU</span>
+            <strong id="farmPnu">-</strong>
+          </div>
+
+          <div class="farm-detail-item">
+            <span>🔢 농지 UID</span>
+            <strong id="farmUid">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================== -->
+      <!-- 2. 농장 관리 메뉴 -->
+      <!-- ======================================== -->
+
+      <section class="farm-card">
+        <h2>⚙️ 농장 관리</h2>
+
+        <div class="farm-management-tabs">
+          <button type="button" class="management-tab active" id="diaryTab">
+            📖 재배 일지
+          </button>
+
+          <button type="button" class="management-tab" disabled>
+            🧪 농약 관리
+          </button>
+
+          <button type="button" class="management-tab" disabled>
+            🌱 비료 관리
+          </button>
+
+          <button type="button" class="management-tab" disabled>
+            🌾 수확 관리
+          </button>
+
+          <button type="button" class="management-tab" disabled>
+            📊 농장 통계
+          </button>
+        </div>
+      </section>
+
+      <!-- ======================================== -->
+      <!-- 3. 재배 일지 -->
+      <!-- ======================================== -->
+
+      <section class="farm-card" id="diarySection">
+        <div class="section-header">
+          <h2>📖 재배 일지</h2>
+
+          <p>농장에서 진행한 작업 기록을 관리합니다.</p>
+        </div>
+
+        <!-- 재배 일지 목록 -->
+        <div id="diaryList" class="diary-list">재배 일지를 불러오는 중...</div>
+      </section>
+    </main>
+
+    <!-- ======================================== -->
+    <!-- 농장 상세 화면 JavaScript -->
+    <!-- ======================================== -->
+
+    <script type="module" src="/js/farm.js"></script>
+  </body>
+</html>

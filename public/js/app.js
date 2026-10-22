@@ -545,7 +545,11 @@ async function loadFarms(mapController) {
 
       deleteBtn.addEventListener("click", async () => {
         // 삭제 확인
-        const confirmed = confirm(`${farm.name} 농장을 삭제하시겠습니까?`);
+        const confirmed = confirm(
+          `${farm.name} 농장을 삭제하시겠습니까?\n\n` +
+            "⚠️ 해당 농장의 재배 일지도 모두 삭제됩니다.\n" +
+            "삭제한 데이터는 복구할 수 없습니다.",
+        );
 
         if (!confirmed) {
           return;
@@ -605,7 +609,6 @@ async function loadFarms(mapController) {
       // 🌱 농장 관리 버튼 영역
       // 수정 / 삭제 버튼 가로 배치
       // ========================================
-
       // ========================================
       // 🌱 농장 관리 버튼 영역
       // ========================================
@@ -614,19 +617,55 @@ async function loadFarms(mapController) {
 
       actionButtons.className = "farm-action-buttons";
 
-      // 수정 기능 생성
+      // ========================================
+      // 1. 농장 상세 관리 버튼 생성
+      // ========================================
+
+      const manageBtn = document.createElement("button");
+
+      manageBtn.type = "button";
+
+      manageBtn.textContent = "⚙️ 농장 관리";
+
+      manageBtn.className = "farm-manage-btn";
+
+      // ========================================
+      // 2. 농장 관리 버튼 클릭
+      // ========================================
+
+      manageBtn.addEventListener("click", () => {
+        console.log("🌱 농장 관리 페이지 이동:", farm.id);
+
+        // 현재 도메인을 자동으로 사용
+        window.location.href = `/farm.html?id=${encodeURIComponent(farm.id)}`;
+      });
+
+      // ========================================
+      // 3. 기존 수정 기능
+      // ========================================
+
       const editControls = createFarmEditControls(farm, mapController);
 
-      // 수정 버튼 추가
+      // ========================================
+      // 4. 버튼 배치
+      // ========================================
+
+      // 농장 관리 버튼
+      actionButtons.appendChild(manageBtn);
+
+      // 수정 버튼
       actionButtons.appendChild(editControls.container);
 
-      // 삭제 버튼 추가
+      // 삭제 버튼
       actionButtons.appendChild(deleteBtn);
 
-      // 버튼 영역을 농장 카드에 추가
+      // ========================================
+      // 5. 농장 카드에 추가
+      // ========================================
+
       item.appendChild(actionButtons);
 
-      // 수정 폼은 버튼 영역 아래에 배치
+      // 수정 폼은 버튼 아래에 표시
       item.appendChild(editControls.editForm);
 
       // 농장 카드 표시

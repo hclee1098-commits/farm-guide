@@ -112,6 +112,14 @@ console.log("데이터베이스 연결 시작...");
 
 const db = new DatabaseSync(path.join(__dirname, "farm-guide.db"));
 
+// ========================================
+// 🌱 SQLite 외래 키 제약 조건 활성화
+// ========================================
+
+db.exec("PRAGMA foreign_keys = ON");
+
+console.log("SQLite 외래 키 활성화 완료!");
+
 console.log("데이터베이스 연결 성공!");
 
 // ========================================
@@ -184,6 +192,74 @@ app.get("/api/farms", (req, res) => {
     res.status(500).json({
       success: false,
       message: "농장 목록 조회 실패",
+    });
+  }
+});
+
+// ========================================
+// 🌱 농장 상세 정보 조회 API
+// ========================================
+
+app.get("/api/farms/:id", (req, res) => {
+  try {
+    // ========================================
+    // 1. 농장 ID 확인
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. SQLite에서 농장 조회
+    // ========================================
+
+    const farm = db
+      .prepare(
+        `
+        SELECT
+          id,
+          name,
+          crop,
+          area,
+          address,
+          pnu,
+          farm_uid
+        FROM farms
+        WHERE id = ?
+      `,
+      )
+      .get(farmId);
+
+    // ========================================
+    // 3. 농장 존재 여부 확인
+    // ========================================
+
+    if (!farm) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 농장을 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 4. 농장 정보 반환
+    // ========================================
+
+    console.log("🌱 농장 상세 조회:", farm.name);
+
+    res.json(farm);
+  } catch (error) {
+    console.error("농장 상세 조회 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "농장 정보를 불러오지 못했습니다.",
     });
   }
 });
@@ -749,13 +825,249 @@ app.get("/api/farmmap/fields", (req, res) => {
 });
 
 // ========================================
+// 🌱 재배 일지 테이블 생성
+// ========================================
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS farm_diaries (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    farm_id INTEGER NOT NULL,
+
+    work_date TEXT NOT NULL,
+
+    work_type TEXT NOT NULL,
+
+    memo TEXT NOT NULL DEFAULT '',
+
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (farm_id)
+      REFERENCES farms(id)
+      ON DELETE CASCADE
+  )
+`);
+
+console.log("🌱 재배 일지 테이블 생성 완료!");
+
+// ========================================
+// 재배 일지 조회 속도 개선
+// ========================================
+
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_farm_diaries_farm_date
+  ON farm_diaries(farm_id, work_date DESC, id DESC)
+`);
+
+console.log("🌱 재배 일지 인덱스 생성 완료!");
+
+// ========================================
+// 🌱 농장별 재배 일지 조회 API
+// ========================================
+
+app.get("/api/farms/:id/diaries", (req, res) => {
+  try {
+    // ========================================
+    // 1. 농장 ID 확인
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. 농장 존재 여부 확인
+    // ========================================
+
+    const farm = db.prepare("SELECT id FROM farms WHERE id = ?").get(farmId);
+
+    if (!farm) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 농장을 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 3. 재배 일지 조회
+    // ========================================
+
+    const diaries = db
+      .prepare(
+        `
+        SELECT *
+        FROM farm_diaries
+        WHERE farm_id = ?
+        ORDER BY work_date DESC, id DESC
+      `,
+      )
+      .all(farmId);
+
+    // ========================================
+    // 4. 조회 결과 반환
+    // ========================================
+
+    res.json(diaries);
+  } catch (error) {
+    console.error("재배 일지 조회 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "재배 일지를 불러오지 못했습니다.",
+    });
+  }
+});
+
+// ========================================
+// 🌱 재배 일지 저장 API
+// ========================================
+
+app.post("/api/farms/:id/diaries", (req, res) => {
+  try {
+    // ========================================
+    // 1. 농장 ID
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. 요청 데이터
+    // ========================================
+
+    const { work_date, work_type, memo } = req.body || {};
+
+    // ========================================
+    // 3. 입력값 검증
+    // ========================================
+
+    if (
+      typeof work_date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(work_date)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 작업 날짜를 입력해주세요.",
+      });
+    }
+
+    // 실제 존재하는 날짜인지 확인
+    const [year, month, day] = work_date.split("-").map(Number);
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "존재하지 않는 날짜입니다.",
+      });
+    }
+
+    if (typeof work_type !== "string" || !work_type.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "작업 종류를 입력해주세요.",
+      });
+    }
+
+    if (memo !== undefined && memo !== null && typeof memo !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "작업 내용은 문자열이어야 합니다.",
+      });
+    }
+
+    // ========================================
+    // 4. 농장 존재 여부 확인
+    // ========================================
+
+    const farm = db.prepare("SELECT id FROM farms WHERE id = ?").get(farmId);
+
+    if (!farm) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 농장을 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 5. 재배 일지 저장
+    // ========================================
+
+    const result = db
+      .prepare(
+        `
+        INSERT INTO farm_diaries (
+          farm_id,
+          work_date,
+          work_type,
+          memo
+        )
+        VALUES (?, ?, ?, ?)
+      `,
+      )
+      .run(
+        farmId,
+        work_date,
+        work_type.trim(),
+        typeof memo === "string" ? memo.trim() : "",
+      );
+
+    // ========================================
+    // 6. 저장 완료
+    // ========================================
+
+    console.log("🌱 재배 일지 저장 완료:", farmId);
+
+    res.status(201).json({
+      success: true,
+      id: Number(result.lastInsertRowid),
+      message: "재배 일지가 저장되었습니다.",
+    });
+  } catch (error) {
+    console.error("재배 일지 저장 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "재배 일지를 저장하지 못했습니다.",
+    });
+  }
+});
+
+// ========================================
 // 12. 서버 실행
+// ========================================
+
+// ========================================
+// 🌱 서버 실행
 // ========================================
 
 const server = app.listen(PORT, () => {
   console.log("==============================");
   console.log("🌱 농사 가이드 서버 실행 완료!");
-  console.log(`주소: http://127.0.0.1:${PORT}`);
+
+  console.log(`서버 포트: ${PORT}`);
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`로컬 접속: http://127.0.0.1:${PORT}`);
+  }
+
   console.log("데이터베이스 연결 완료!");
   console.log("==============================");
 });

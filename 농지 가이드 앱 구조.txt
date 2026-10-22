@@ -1,18 +1,29 @@
+
+
 farm-guide/
 │
-├── frontend/
-│   └── 웹앱 화면
+├── server.js
 │
-├── backend/
-│   └── API 서버
-│
-└── database/
+└── public/
     │
-    ├── farm-guide.db
-    │   └── 사용자 농장 정보
+    ├── index.html
     │
-    └── farmland.db
-        └── 농지 경계 정보
+    ├── farm.html              ⭐ 새로 생성
+    │
+    ├── css/
+    │   ├── style.css
+    │   ├── map.css
+    │   ├── farm-info.css
+    │   ├── farm-search.css
+    │   └── farm.css           ⭐ 새로 생성
+    │
+    └── js/
+        ├── app.js
+        ├── map.js
+        ├── farmmap.js
+        ├── farm-info.js
+        ├── farm-search.js
+        └── farm.js            ⭐ 새로 생성
 		
 		
 		
@@ -32,3 +43,41 @@ farm-guide/
     ├── 6. 농지 검색 기능 연결
     │
     └── 7. 농장 등록 기능 연결
+	
+	
+	
+
+
+                    🌱 농사 가이드
+                           │
+                           ▼
+                    🏠 index.html
+                           │
+                    등록된 농장 목록
+                           │
+               ┌───────────┴───────────┐
+               │                       │
+         🌶️ 고추 농장             🍎 사과 농장
+               │                       │
+          농장 관리 클릭          농장 관리 클릭
+               │                       │
+               ▼                       ▼
+       farm.html?id=5           farm.html?id=6
+               │                       │
+               └───────────┬───────────┘
+                           │
+                        farm.js
+                           │
+                    농장 ID로 조회
+                           │
+                           ▼
+                       server.js
+                           │
+                           ▼
+                     🗄️ SQLite DB
+                           │
+               ┌───────────┴───────────┐
+               │                       │
+             farms                farm_diaries
+               │                       │
+           농장 기본 정보           재배 일지
