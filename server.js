@@ -1070,6 +1070,265 @@ app.post("/api/farms/:id/diaries", (req, res) => {
 });
 
 // ========================================
+// 📖 재배 일지 수정 API
+// ========================================
+
+app.put("/api/farms/:id/diaries/:diaryId", (req, res) => {
+  try {
+    // ========================================
+    // 1. 농장 ID 및 일지 ID 확인
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    const diaryId = Number(req.params.diaryId);
+
+    if (
+      !Number.isSafeInteger(farmId) ||
+      farmId <= 0 ||
+      !Number.isSafeInteger(diaryId) ||
+      diaryId <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. 수정할 재배 일지 확인
+    // ========================================
+
+    const existingDiary = db
+      .prepare(
+        `
+        SELECT *
+        FROM farm_diaries
+        WHERE id = ? AND farm_id = ?
+        `,
+      )
+      .get(diaryId, farmId);
+
+    if (!existingDiary) {
+      return res.status(404).json({
+        success: false,
+        message: "수정할 재배 일지를 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 3. 요청 데이터
+    // ========================================
+
+    const { work_date, work_type, memo } = req.body ?? {};
+
+    // ========================================
+    // 4. 작업 날짜 검증
+    // ========================================
+
+    if (
+      typeof work_date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(work_date)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 작업 날짜를 입력해주세요.",
+      });
+    }
+
+    // 실제 존재하는 날짜 확인
+    const date = new Date(`${work_date}T00:00:00Z`);
+
+    if (
+      !Number.isFinite(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== work_date
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "존재하지 않는 날짜입니다.",
+      });
+    }
+
+    // ========================================
+    // 5. 작업 종류 검증
+    // ========================================
+
+    if (
+      typeof work_type !== "string" ||
+      !work_type.trim() ||
+      work_type.trim().length > 50
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "작업 종류는 1~50자로 입력해주세요.",
+      });
+    }
+
+    // ========================================
+    // 6. 작업 내용 검증
+    // ========================================
+
+    if (memo !== undefined && memo !== null && typeof memo !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "작업 내용 형식이 올바르지 않습니다.",
+      });
+    }
+
+    const workMemo = (memo ?? "").trim();
+
+    if (workMemo.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message: "작업 내용은 2000자 이하로 입력해주세요.",
+      });
+    }
+
+    // ========================================
+    // 7. SQLite 재배 일지 수정
+    // ========================================
+
+    db.prepare(
+      `
+      UPDATE farm_diaries
+
+      SET
+        work_date = ?,
+        work_type = ?,
+        memo = ?
+
+      WHERE id = ? AND farm_id = ?
+      `,
+    ).run(work_date, work_type.trim(), workMemo, diaryId, farmId);
+
+    // ========================================
+    // 8. 수정된 재배 일지 조회
+    // ========================================
+
+    const updatedDiary = db
+      .prepare(
+        `
+        SELECT *
+        FROM farm_diaries
+        WHERE id = ? AND farm_id = ?
+        `,
+      )
+      .get(diaryId, farmId);
+
+    console.log("📖 재배 일지 수정 완료:", diaryId);
+
+    // ========================================
+    // 9. 수정 결과 반환
+    // ========================================
+
+    res.json({
+      success: true,
+      message: "재배 일지가 수정되었습니다.",
+      diary: updatedDiary,
+    });
+  } catch (error) {
+    console.error("재배 일지 수정 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "재배 일지를 수정하지 못했습니다.",
+    });
+  }
+});
+
+// ========================================
+// 🗑 재배 일지 삭제 API
+// ========================================
+
+app.delete("/api/farms/:id/diaries/:diaryId", (req, res) => {
+  try {
+    // ========================================
+    // 1. 농장 ID 및 일지 ID
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    const diaryId = Number(req.params.diaryId);
+
+    if (
+      !Number.isSafeInteger(farmId) ||
+      farmId <= 0 ||
+      !Number.isSafeInteger(diaryId) ||
+      diaryId <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. 삭제할 재배 일지 확인
+    // ========================================
+
+    const diary = db
+      .prepare(
+        `
+        SELECT id
+        FROM farm_diaries
+        WHERE id = ? AND farm_id = ?
+        `,
+      )
+      .get(diaryId, farmId);
+
+    if (!diary) {
+      return res.status(404).json({
+        success: false,
+        message: "삭제할 재배 일지를 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 3. SQLite에서 재배 일지 삭제
+    // ========================================
+
+    const result = db
+      .prepare(
+        `
+        DELETE FROM farm_diaries
+        WHERE id = ? AND farm_id = ?
+        `,
+      )
+      .run(diaryId, farmId);
+
+    // ========================================
+    // 4. 삭제 결과 확인
+    // ========================================
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "삭제할 재배 일지가 없습니다.",
+      });
+    }
+
+    console.log("🗑 재배 일지 삭제 완료:", diaryId);
+
+    // ========================================
+    // 5. 삭제 성공 응답
+    // ========================================
+
+    res.json({
+      success: true,
+      message: "재배 일지가 삭제되었습니다.",
+      deletedId: diaryId,
+    });
+  } catch (error) {
+    console.error("재배 일지 삭제 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "재배 일지를 삭제하지 못했습니다.",
+    });
+  }
+});
+
+// ========================================
 // 12. 서버 실행
 // ========================================
 
