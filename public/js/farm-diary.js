@@ -63,6 +63,22 @@ let currentFarmGetter = null;
 let formControls = null;
 
 // ========================================
+// 📸 기존 재배 일지 사진 관리
+// ========================================
+
+// 기존 사진 표시 영역
+let existingPhotoBox = null;
+
+// 기존 사진 이미지
+let existingPhotoImage = null;
+
+// 기존 사진 삭제 버튼
+let existingPhotoDeleteButton = null;
+
+// 현재 수정 중인 일지 데이터
+let editingDiaryData = null;
+
+// ========================================
 // 2. 현재 농장 확인
 // ========================================
 
@@ -87,6 +103,51 @@ function isFarmScreenActive(farmId, session) {
     farmView !== null &&
     !farmView.hidden
   );
+}
+
+// ========================================
+// 📸 수정 화면에서 기존 사진 표시
+// ========================================
+
+function showExistingDiaryPhoto(diary) {
+  if (!existingPhotoBox || !existingPhotoImage || !existingPhotoDeleteButton) {
+    return;
+  }
+
+  // ========================================
+  // 사진 존재 여부
+  // ========================================
+
+  const hasPhoto = Boolean(diary?.has_photo);
+
+  // 사진이 없으면 영역 숨기기
+  existingPhotoBox.hidden = !hasPhoto;
+
+  existingPhotoDeleteButton.disabled = !hasPhoto;
+
+  if (!hasPhoto) {
+    existingPhotoImage.removeAttribute("src");
+    return;
+  }
+
+  // ========================================
+  // 현재 농장 ID
+  // ========================================
+
+  const farmId = getCurrentFarmId();
+
+  if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+    existingPhotoBox.hidden = true;
+    return;
+  }
+
+  // ========================================
+  // 기존 사진 조회 API 연결
+  // ========================================
+
+  existingPhotoImage.src = `/api/farms/${farmId}/diaries/${diary.id}/photo`;
+
+  console.log("📸 기존 재배 일지 사진 표시:", diary.id);
 }
 
 // ========================================
@@ -129,6 +190,12 @@ function closeDiaryForm() {
   // ========================================
 
   editingDiaryId = null;
+
+  // 수정 중인 일지 데이터 초기화
+  editingDiaryData = null;
+
+  // 기존 사진 표시 초기화
+  showExistingDiaryPhoto(null);
 
   // ========================================
   // 5. 입력값 초기화
@@ -203,6 +270,19 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
     return;
   }
 
+  // ========================================
+  // 인라인 수정 폼 보호
+  // 목록 초기화 전에 원래 위치로 복귀
+  // ========================================
+
+  if (formControls?.form && diaryList.contains(formControls.form)) {
+    closeDiaryForm();
+  }
+
+  // ========================================
+  // 로딩 메시지 표시
+  // ========================================
+
   diaryList.textContent = "📖 재배 일지를 불러오는 중...";
 
   try {
@@ -231,10 +311,10 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
     // 목록 초기화 전 수정 폼 보호
     // ========================================
 
-    if (formControls?.form && diaryList.contains(formControls.form)) {
-      // 기존 폼을 원래 위치로 돌려놓기
-      closeDiaryForm();
-    }
+    // if (formControls?.form && diaryList.contains(formControls.form)) {
+    //   // 기존 폼을 원래 위치로 돌려놓기
+    //   closeDiaryForm();
+    // }
 
     // ========================================
     // 기존 목록 초기화
@@ -477,6 +557,18 @@ function openEditDiary(diary, item) {
   editingDiaryItem = item;
 
   // ========================================
+  // 📸 수정 중인 일지 데이터 기억
+  // ========================================
+
+  editingDiaryData = diary;
+
+  // ========================================
+  // 📸 기존 사진 표시
+  // ========================================
+
+  showExistingDiaryPhoto(diary);
+
+  // ========================================
   // 3. 해당 카드 수정 모드 활성화
   // ========================================
 
@@ -619,6 +711,203 @@ export function initFarmDiary(getFarmId) {
 
   // 작성 폼 바로 앞에 위치 표시
   form.before(diaryFormAnchor);
+
+  // ========================================
+  // 📸 기존 사진 표시 영역 생성
+  // ========================================
+
+  existingPhotoBox = document.createElement("div");
+
+  existingPhotoBox.id = "diaryExistingPhoto";
+
+  existingPhotoBox.className = "diary-existing-photo";
+
+  existingPhotoBox.hidden = true;
+
+  // ========================================
+  // 기존 사진 제목
+  // ========================================
+
+  const existingPhotoTitle = document.createElement("p");
+
+  existingPhotoTitle.textContent = "📸 현재 등록된 사진";
+
+  // ========================================
+  // 기존 사진 이미지
+  // ========================================
+
+  existingPhotoImage = document.createElement("img");
+
+  existingPhotoImage.className = "diary-existing-photo-image";
+
+  existingPhotoImage.alt = "현재 등록된 재배 일지 사진";
+
+  existingPhotoImage.loading = "lazy";
+
+  // ========================================
+  // 기존 사진 삭제 버튼
+  // ========================================
+
+  existingPhotoDeleteButton = document.createElement("button");
+
+  existingPhotoDeleteButton.type = "button";
+
+  existingPhotoDeleteButton.className = "diary-photo-remove-btn";
+
+  existingPhotoDeleteButton.textContent = "🗑 현재 사진 삭제";
+
+  // ========================================
+  // 사진 영역 구성
+  // ========================================
+
+  existingPhotoBox.appendChild(existingPhotoTitle);
+
+  existingPhotoBox.appendChild(existingPhotoImage);
+
+  existingPhotoBox.appendChild(existingPhotoDeleteButton);
+
+  // ========================================
+  // 기존 사진 영역을 파일 선택 앞에 배치
+  // ========================================
+
+  photoInput.before(existingPhotoBox);
+
+  // ========================================
+  // 🗑 기존 재배 일지 사진 삭제
+  // ========================================
+
+  existingPhotoDeleteButton.addEventListener("click", async () => {
+    // ========================================
+    // 1. 현재 농장 및 일지 확인
+    // ========================================
+
+    const farmId = getCurrentFarmId();
+
+    const diaryId = editingDiaryId;
+
+    const deleteSession = diarySession;
+
+    const deleteRevision = formRevision;
+
+    const targetDiary = editingDiaryData;
+
+    const targetItem = editingDiaryItem;
+
+    if (
+      !Number.isSafeInteger(farmId) ||
+      farmId <= 0 ||
+      !Number.isSafeInteger(diaryId) ||
+      diaryId <= 0
+    ) {
+      alert("삭제할 사진 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    // 저장 중에는 사진 삭제 금지
+    if (saveBtn.disabled) {
+      return;
+    }
+
+    // ========================================
+    // 2. 삭제 확인
+    // ========================================
+
+    const confirmed = confirm(
+      "현재 등록된 사진을 삭제하시겠습니까?\n\n" +
+        "재배 일지 내용은 삭제되지 않습니다.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // ========================================
+    // 3. 현재 수정 화면 확인
+    // ========================================
+
+    const isStillEditing = () => {
+      return (
+        isFarmScreenActive(farmId, deleteSession) &&
+        formRevision === deleteRevision &&
+        editingDiaryId === diaryId
+      );
+    };
+
+    // ========================================
+    // 4. 중복 요청 방지
+    // ========================================
+
+    existingPhotoDeleteButton.disabled = true;
+
+    existingPhotoDeleteButton.textContent = "삭제 중...";
+
+    saveBtn.disabled = true;
+
+    try {
+      // ========================================
+      // 5. SQLite 사진 삭제 API 요청
+      // ========================================
+
+      const response = await fetch(
+        `/api/farms/${farmId}/diaries/${diaryId}/photo`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || "사진 삭제 실패");
+      }
+
+      console.log("🗑 사진 삭제 완료:", diaryId);
+
+      // ========================================
+      // 6. 현재 일지 데이터 변경
+      // ========================================
+
+      if (targetDiary) {
+        targetDiary.has_photo = 0;
+      }
+
+      // ========================================
+      // 7. 기존 목록 사진 제거
+      // ========================================
+
+      const listPhoto = targetItem?.querySelector(".diary-photo");
+
+      if (listPhoto) {
+        listPhoto.remove();
+      }
+
+      // ========================================
+      // 8. 현재 수정 화면 갱신
+      // ========================================
+
+      if (isStillEditing()) {
+        showExistingDiaryPhoto(null);
+
+        alert("📸 사진이 삭제되었습니다.");
+      }
+    } catch (error) {
+      console.error("사진 삭제 오류:", error);
+
+      if (isStillEditing()) {
+        alert(error.message);
+      }
+    } finally {
+      // ========================================
+      // 9. 버튼 상태 복구
+      // ========================================
+
+      if (isStillEditing()) {
+        existingPhotoDeleteButton.textContent = "🗑 현재 사진 삭제";
+
+        saveBtn.disabled = false;
+      }
+    }
+  });
 
   // ========================================
   // 📸 사진 선택 및 미리보기

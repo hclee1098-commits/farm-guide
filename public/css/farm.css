@@ -513,3 +513,86 @@ body {
     padding: 15px;
   }
 }
+
+/* ========================================
+   📸 재배 일지 기존 사진 관리
+======================================== */
+
+.diary-existing-photo {
+  margin: 15px 0;
+  padding: 16px;
+
+  background: #f8faf8;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  gap: 12px;
+}
+
+/* 숨김 상태 */
+
+.diary-existing-photo[hidden] {
+  display: none !important;
+}
+
+/* 기존 사진 제목 */
+
+.diary-existing-photo p {
+  margin: 0;
+
+  font-size: 14px;
+  font-weight: bold;
+
+  color: #2e7d32;
+}
+
+/* 기존 사진 */
+
+.diary-existing-photo-image {
+  display: block;
+
+  max-width: 100%;
+  width: 280px;
+  height: auto;
+
+  border-radius: 8px;
+
+  border: 1px solid #ddd;
+}
+
+/* ========================================
+   🗑 기존 사진 삭제 버튼
+======================================== */
+
+.diary-photo-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 9px 14px;
+
+  background: #fff5f5;
+  color: #e03131;
+
+  border: 1px solid #ffc9c9;
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.diary-photo-remove-btn:hover {
+  background: #ffe3e3;
+}
+
+.diary-photo-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

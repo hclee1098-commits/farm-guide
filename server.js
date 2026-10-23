@@ -194,6 +194,19 @@ if (!columnNames.includes("pnu")) {
 console.log("농장 데이터베이스 확장 완료!");
 
 // ========================================
+// 🌱 팜맵 농지 UID 컬럼 추가
+// ========================================
+
+if (!columnNames.includes("farm_uid")) {
+  db.exec(`
+    ALTER TABLE farms
+    ADD COLUMN farm_uid TEXT
+  `);
+
+  console.log("🌱 농지 UID 컬럼 추가 완료!");
+}
+
+// ========================================
 // 6. 농장 목록 조회 API
 // ========================================
 
@@ -1319,6 +1332,97 @@ app.get("/api/farms/:id/diaries/:diaryId/photo", (req, res) => {
     res.status(500).json({
       success: false,
       message: "사진을 불러오지 못했습니다.",
+    });
+  }
+});
+
+// ========================================
+// 🗑 재배 일지 사진 삭제 API
+// ========================================
+
+app.delete("/api/farms/:id/diaries/:diaryId/photo", (req, res) => {
+  try {
+    // ========================================
+    // 1. 농장 ID 및 일지 ID 확인
+    // ========================================
+
+    const farmId = Number(req.params.id);
+
+    const diaryId = Number(req.params.diaryId);
+
+    if (
+      !Number.isSafeInteger(farmId) ||
+      farmId <= 0 ||
+      !Number.isSafeInteger(diaryId) ||
+      diaryId <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "올바른 농장 또는 일지 ID가 아닙니다.",
+      });
+    }
+
+    // ========================================
+    // 2. 해당 농장의 재배 일지인지 확인
+    // ========================================
+
+    const diary = db
+      .prepare(
+        `
+        SELECT id
+        FROM farm_diaries
+        WHERE id = ? AND farm_id = ?
+        `,
+      )
+      .get(diaryId, farmId);
+
+    if (!diary) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 3. SQLite 사진 삭제
+    // ========================================
+
+    const result = db
+      .prepare(
+        `
+        DELETE FROM diary_photos
+        WHERE diary_id = ?
+        `,
+      )
+      .run(diaryId);
+
+    // ========================================
+    // 4. 삭제 결과 확인
+    // ========================================
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "삭제할 사진이 없습니다.",
+      });
+    }
+
+    // ========================================
+    // 5. 삭제 완료
+    // ========================================
+
+    console.log("🗑 재배 일지 사진 삭제 완료:", diaryId);
+
+    res.json({
+      success: true,
+      message: "사진이 삭제되었습니다.",
+    });
+  } catch (error) {
+    console.error("재배 일지 사진 삭제 오류:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "사진을 삭제하지 못했습니다.",
     });
   }
 });
