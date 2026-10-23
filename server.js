@@ -936,17 +936,28 @@ app.get("/api/farms/:id/diaries", (req, res) => {
     }
 
     // ========================================
-    // 3. 재배 일지 조회
+    // 📖 재배 일지 조회
+    // 사진 첨부 여부 포함
     // ========================================
 
     const diaries = db
       .prepare(
         `
-        SELECT *
-        FROM farm_diaries
-        WHERE farm_id = ?
-        ORDER BY work_date DESC, id DESC
-      `,
+    SELECT
+      d.*,
+
+      EXISTS (
+        SELECT 1
+        FROM diary_photos p
+        WHERE p.diary_id = d.id
+      ) AS has_photo
+
+    FROM farm_diaries d
+
+    WHERE d.farm_id = ?
+
+    ORDER BY d.work_date DESC, d.id DESC
+    `,
       )
       .all(farmId);
 

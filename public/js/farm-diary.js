@@ -9,6 +9,30 @@
 // 이벤트 중복 등록 방지
 let diaryFormInitialized = false;
 
+// ========================================
+// 📸 사진 미리보기 관리
+// ========================================
+
+let photoPreviewUrl = null;
+
+// ========================================
+// 사진 미리보기 초기화
+// ========================================
+
+function resetDiaryPhotoPreview() {
+  const preview = document.getElementById("diaryPhotoPreview");
+
+  if (photoPreviewUrl) {
+    URL.revokeObjectURL(photoPreviewUrl);
+    photoPreviewUrl = null;
+  }
+
+  if (preview) {
+    preview.removeAttribute("src");
+    preview.hidden = true;
+  }
+}
+
 // SPA 농장 화면 전환 구분 번호
 let diarySession = 0;
 
@@ -72,8 +96,14 @@ function closeDiaryForm() {
   // 수정 상태 초기화
   editingDiaryId = null;
 
+  // ========================================
   // 입력값 초기화
+  // ========================================
+
   form.reset();
+
+  // 📸 사진 미리보기 초기화
+  resetDiaryPhotoPreview();
 
   // 입력 폼 숨기기
   form.hidden = true;
@@ -304,12 +334,51 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
       // 카드 구성
       // ========================================
 
+      // 수정 / 삭제 버튼
       actions.appendChild(editBtn);
       actions.appendChild(deleteBtn);
 
+      // 작업 제목
       item.appendChild(title);
+
+      // 작업 내용
       item.appendChild(memo);
+
+      // ========================================
+      // 📸 저장된 재배 일지 사진 표시
+      // ========================================
+
+      // 사진이 등록된 경우에만 표시
+      if (diary.has_photo) {
+        const photo = document.createElement("img");
+
+        photo.className = "diary-photo";
+
+        photo.src = `/api/farms/${id}/diaries/${diary.id}/photo`;
+
+        photo.alt = `${diary.work_date} 작업 사진`;
+
+        photo.loading = "lazy";
+
+        // 이미지 로딩 실패 처리
+        photo.addEventListener("error", () => {
+          console.error("재배 일지 사진 불러오기 실패:", diary.id);
+
+          photo.hidden = true;
+        });
+
+        item.appendChild(photo);
+      }
+
+      // ========================================
+      // 수정 / 삭제 버튼은 사진 아래 표시
+      // ========================================
+
       item.appendChild(actions);
+
+      // ========================================
+      // 완성된 재배 일지 카드 추가
+      // ========================================
 
       diaryList.appendChild(item);
     });
@@ -346,6 +415,9 @@ function openEditDiary(diary) {
 
   // 기존 입력값 초기화
   form.reset();
+
+  // 📸 이전 사진 미리보기 초기화
+  resetDiaryPhotoPreview();
 
   // ========================================
   // 기존 재배 일지 데이터 입력
@@ -415,6 +487,14 @@ export function initFarmDiary(getFarmId) {
 
   const memoInput = document.getElementById("diaryMemo");
 
+  // ========================================
+  // 📸 사진 첨부 요소
+  // ========================================
+
+  const photoInput = document.getElementById("diaryPhoto");
+
+  const photoPreview = document.getElementById("diaryPhotoPreview");
+
   if (
     !writeBtn ||
     !form ||
@@ -422,7 +502,9 @@ export function initFarmDiary(getFarmId) {
     !saveBtn ||
     !dateInput ||
     !typeInput ||
-    !memoInput
+    !memoInput ||
+    !photoInput ||
+    !photoPreview
   ) {
     console.error("재배 일지 작성 폼을 찾을 수 없습니다.");
     return;
@@ -451,6 +533,58 @@ export function initFarmDiary(getFarmId) {
   };
 
   // ========================================
+  // 📸 사진 선택 및 미리보기
+  // ========================================
+
+  photoInput.addEventListener("change", () => {
+    resetDiaryPhotoPreview();
+
+    const file = photoInput.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    // ========================================
+    // 사진 형식 검사
+    // ========================================
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("JPG, PNG, WebP 사진만 등록할 수 있습니다.");
+
+      photoInput.value = "";
+      return;
+    }
+
+    // ========================================
+    // 사진 크기 검사 (3MB)
+    // ========================================
+
+    const maxSize = 3 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      alert("사진 크기는 최대 3MB까지 가능합니다.");
+
+      photoInput.value = "";
+      return;
+    }
+
+    // ========================================
+    // 사진 미리보기
+    // ========================================
+
+    photoPreviewUrl = URL.createObjectURL(file);
+
+    photoPreview.src = photoPreviewUrl;
+
+    photoPreview.hidden = false;
+
+    console.log("📸 사진 선택 완료:", file.name);
+  });
+
+  // ========================================
   // 8. 새 일지 작성 버튼
   // ========================================
 
@@ -467,6 +601,9 @@ export function initFarmDiary(getFarmId) {
     editingDiaryId = null;
 
     form.reset();
+
+    // 📸 사진 미리보기 초기화
+    resetDiaryPhotoPreview();
 
     form.hidden = false;
 
@@ -540,6 +677,25 @@ export function initFarmDiary(getFarmId) {
 
     const memo = memoInput.value.trim();
 
+    // ========================================
+    // 📸 첨부할 사진 가져오기
+    // ========================================
+
+    const photoFile = photoInput.files[0] ?? null;
+
+    // 사진이 있다면 크기와 형식 재검사
+    if (photoFile) {
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+      if (
+        !allowedTypes.includes(photoFile.type) ||
+        photoFile.size > 3 * 1024 * 1024
+      ) {
+        alert("사진 형식 또는 크기를 확인해주세요.");
+        return;
+      }
+    }
+
     if (!work_date || !work_type) {
       alert("작업 날짜와 종류를 입력해주세요.");
       return;
@@ -603,6 +759,71 @@ export function initFarmDiary(getFarmId) {
 
       console.log("📖 재배 일지 처리 완료:", result);
 
+      // ========================================
+      // 📸 재배 일지 사진 업로드
+      // ========================================
+
+      let photoError = null;
+
+      // 첨부한 사진이 있는 경우에만 업로드
+      if (photoFile) {
+        try {
+          // ========================================
+          // 1. 저장된 재배 일지 ID 확인
+          // ========================================
+
+          // 수정 모드에서는 기존 일지 ID 사용
+          // 신규 작성에서는 서버가 반환한 ID 사용
+          const savedDiaryId = isEditMode ? diaryId : Number(result.id);
+
+          if (!Number.isSafeInteger(savedDiaryId) || savedDiaryId <= 0) {
+            throw new Error("재배 일지 ID를 확인할 수 없습니다.");
+          }
+
+          // ========================================
+          // 2. 사진 업로드 데이터 생성
+          // ========================================
+
+          const formData = new FormData();
+
+          formData.append("photo", photoFile);
+
+          // ========================================
+          // 3. 사진 저장 API 요청
+          // ========================================
+
+          const photoResponse = await fetch(
+            `/api/farms/${farmId}/diaries/${savedDiaryId}/photo`,
+            {
+              method: "POST",
+              body: formData,
+            },
+          );
+
+          // ========================================
+          // 4. 서버 응답 확인
+          // ========================================
+
+          const photoResult = await photoResponse.json().catch(() => ({}));
+
+          if (!photoResponse.ok) {
+            throw new Error(photoResult.message || "사진 저장에 실패했습니다.");
+          }
+
+          console.log("📸 재배 일지 사진 저장 완료:", savedDiaryId);
+        } catch (error) {
+          console.error("📸 사진 업로드 오류:", error);
+
+          // 재배 일지는 이미 저장되었으므로
+          // 사진 저장 오류만 별도로 기록
+          photoError = error;
+        }
+      }
+
+      // ========================================
+      // 기존 코드 계속 실행
+      // ========================================
+
       // 다른 농장으로 이동했다면 화면 변경하지 않음
       if (!isStillCurrent()) {
         return;
@@ -622,12 +843,24 @@ export function initFarmDiary(getFarmId) {
 
       await loadFarmDiaries(farmId, isStillCurrent);
 
+      // ========================================
+      // 📖 재배 일지 저장 결과 안내
+      // ========================================
+
       if (isStillCurrent()) {
-        alert(
-          isEditMode
-            ? "✏️ 재배 일지가 수정되었습니다!"
-            : "🌱 재배 일지가 저장되었습니다!",
-        );
+        if (photoError) {
+          alert(
+            "재배 일지는 정상적으로 저장되었습니다.\n" +
+              "하지만 사진 저장에 실패했습니다.\n\n" +
+              photoError.message,
+          );
+        } else {
+          alert(
+            isEditMode
+              ? "✏️ 재배 일지가 수정되었습니다!"
+              : "🌱 재배 일지가 저장되었습니다!",
+          );
+        }
       }
     } catch (error) {
       console.error("재배 일지 저장 오류:", error);
