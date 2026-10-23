@@ -1,31 +1,41 @@
 farm-guide/
 │
 ├── server.js
+│
 ├── farm-guide.db
 │
-└── public/
-    │
-    ├── index.html
-    ├── farm.html
-    │
-    ├── css/
-    │   ├── style.css
-    │   ├── map.css
-    │   ├── farm-info.css
-    │   ├── farm-search.css
-    │   └── farm-diary.css       ⭐ 추가 예정
-    │
-    └── js/
-        ├── app.js
-        ├── map.js
-        ├── farmmap.js
-        ├── farm-search.js
-        ├── farm-info.js
-        │
-        ├── farm-view.js        ← SPA 화면 관리
-        ├── farm-diary.js       ⭐ 추가 예정
-        │
-        └── farm.js             ← 기존 파일 임시 유지
+├── public/
+│   │
+│   ├── index.html
+│   │
+│   ├── css/
+│   │   ├── style.css
+│   │   ├── map.css
+│   │   ├── farm.css
+│   │   │
+│   │   └── components/
+│   │       ├── buttons.css
+│   │       ├── forms.css
+│   │       ├── calendar.css
+│   │       └── photo-upload.css
+│   │
+│   └── js/
+│       │
+│       ├── app.js
+│       ├── farm-view.js
+│       ├── farm-diary.js
+│       │
+│       ├── components/
+│       │   ├── buttons.js
+│       │   ├── calendar.js
+│       │   └── photo-upload.js
+│       │
+│       ├── utils/
+│       │   ├── date-utils.js
+│       │   └── validation.js
+│       │
+│       └── api/
+│           └── diary-photo-api.js
 		
 		
 		
@@ -121,3 +131,25 @@ farm-view.js
           ├── 📸 첨부 사진
           ├── ✏️ 수정
           └── 🗑 삭제
+		  
+		  
+		사진 저장 방식  
+사용자 스마트폰 / PC
+        │
+        │ 사진 선택
+        ▼
+   farm-diary.js
+        │
+        │ FormData 생성
+        ▼
+   사진 업로드 API
+        │
+        ▼
+      server.js
+        │
+        ▼
+   사진 저장 처리
+        │
+        ├── 사진 파일 저장
+        │
+        └── SQLite에 사진 정보 저장

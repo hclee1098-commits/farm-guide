@@ -596,3 +596,233 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ========================================
+   📸 재배 일지 사진 갤러리
+======================================== */
+
+.diary-photo-gallery {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+
+  gap: 12px;
+
+  margin-top: 16px;
+
+  margin-bottom: 16px;
+}
+
+/* ========================================
+   📸 사진 카드
+======================================== */
+
+.diary-gallery-item {
+  position: relative;
+
+  overflow: hidden;
+
+  border-radius: 12px;
+
+  background: #f5f5f5;
+
+  border: 1px solid #e5e5e5;
+}
+
+/* ========================================
+   📸 사진 이미지
+======================================== */
+
+.diary-gallery-image {
+  display: block;
+
+  width: 100%;
+
+  height: 150px;
+
+  object-fit: cover;
+}
+
+/* ========================================
+   🗑 사진 삭제 버튼
+======================================== */
+
+.diary-gallery-delete {
+  position: absolute;
+
+  top: 6px;
+
+  right: 6px;
+
+  width: 28px;
+
+  height: 28px;
+
+  border: none;
+
+  border-radius: 50%;
+
+  background: rgba(0, 0, 0, 0.65);
+
+  color: white;
+
+  font-size: 16px;
+
+  cursor: pointer;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+.diary-gallery-delete:hover {
+  background: #d32f2f;
+}
+
+.diary-gallery-delete:disabled {
+  opacity: 0.5;
+
+  cursor: not-allowed;
+}
+
+/* ========================================
+   📱 모바일 사진 갤러리
+======================================== */
+
+@media (max-width: 480px) {
+  .diary-photo-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 8px;
+  }
+
+  .diary-gallery-image {
+    height: 120px;
+  }
+}
+
+/* ========================================
+   📸 사진 여러 장 미리보기
+======================================== */
+
+.diary-photo-previews {
+  display: grid;
+
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+
+  gap: 12px;
+
+  margin-top: 15px;
+}
+
+.diary-photo-previews[hidden] {
+  display: none;
+}
+
+/* ========================================
+   📸 사진 미리보기 카드
+======================================== */
+
+.diary-photo-preview-item {
+  position: relative;
+
+  border: 1px solid #e5e5e5;
+
+  border-radius: 10px;
+
+  overflow: hidden;
+
+  background: #f8f9fa;
+}
+
+/* ========================================
+   📸 사진 이미지
+======================================== */
+
+.diary-photo-preview-image {
+  display: block;
+
+  width: 100%;
+
+  height: 130px;
+
+  object-fit: cover;
+}
+
+/* ========================================
+   🗑 선택한 사진 제거 버튼
+======================================== */
+
+.diary-photo-remove-btn {
+  position: absolute;
+
+  top: 6px;
+
+  right: 6px;
+
+  width: 28px;
+
+  height: 28px;
+
+  border: none;
+
+  border-radius: 50%;
+
+  background: rgba(0, 0, 0, 0.65);
+
+  color: white;
+
+  font-size: 16px;
+
+  cursor: pointer;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+.diary-photo-remove-btn:hover {
+  background: #d32f2f;
+}
+
+/* ========================================
+   📸 사진 파일 이름
+======================================== */
+
+.diary-photo-file-name {
+  display: block;
+
+  padding: 6px;
+
+  font-size: 11px;
+
+  color: #666;
+
+  text-align: center;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+/* ========================================
+   📱 모바일 화면
+======================================== */
+
+@media (max-width: 480px) {
+  .diary-photo-previews {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 8px;
+  }
+
+  .diary-photo-preview-image {
+    height: 120px;
+  }
+}

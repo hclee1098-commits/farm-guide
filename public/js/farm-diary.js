@@ -10,27 +10,177 @@
 let diaryFormInitialized = false;
 
 // ========================================
-// 📸 사진 미리보기 관리
+// 📸 재배 일지 사진 여러 장 관리
 // ========================================
 
-let photoPreviewUrl = null;
+// 현재 선택한 사진 목록
+let selectedDiaryPhotos = [];
+
+// 사진 미리보기 URL 목록
+let photoPreviewUrls = [];
 
 // ========================================
-// 사진 미리보기 초기화
+// 📸 사진 미리보기 초기화
 // ========================================
 
 function resetDiaryPhotoPreview() {
   const preview = document.getElementById("diaryPhotoPreview");
 
-  if (photoPreviewUrl) {
-    URL.revokeObjectURL(photoPreviewUrl);
-    photoPreviewUrl = null;
+  const photoInput = document.getElementById("diaryPhoto");
+
+  // ========================================
+  // 1. 기존 미리보기 URL 해제
+  // ========================================
+
+  photoPreviewUrls.forEach((url) => {
+    URL.revokeObjectURL(url);
+  });
+
+  photoPreviewUrls = [];
+
+  // ========================================
+  // 2. 선택한 사진 목록 초기화
+  // ========================================
+
+  selectedDiaryPhotos = [];
+
+  // ========================================
+  // 3. 파일 입력 초기화
+  // ========================================
+
+  if (photoInput) {
+    photoInput.value = "";
   }
 
+  // ========================================
+  // 4. 미리보기 화면 초기화
+  // ========================================
+
   if (preview) {
-    preview.removeAttribute("src");
+    preview.replaceChildren();
+
     preview.hidden = true;
   }
+}
+
+// ========================================
+// 📸 선택한 사진 여러 장 미리보기
+// ========================================
+
+function renderDiaryPhotoPreviews() {
+  const preview = document.getElementById("diaryPhotoPreview");
+
+  if (!preview) {
+    return;
+  }
+
+  // ========================================
+  // 1. 기존 미리보기 URL 정리
+  // ========================================
+
+  photoPreviewUrls.forEach((url) => {
+    URL.revokeObjectURL(url);
+  });
+
+  photoPreviewUrls = [];
+
+  // ========================================
+  // 2. 기존 미리보기 화면 초기화
+  // ========================================
+
+  preview.replaceChildren();
+
+  // ========================================
+  // 3. 선택한 사진이 없는 경우
+  // ========================================
+
+  if (selectedDiaryPhotos.length === 0) {
+    preview.hidden = true;
+
+    return;
+  }
+
+  preview.hidden = false;
+
+  // ========================================
+  // 4. 선택한 사진별 미리보기 생성
+  // ========================================
+
+  selectedDiaryPhotos.forEach((file, index) => {
+    // 사진 카드
+    const item = document.createElement("div");
+
+    item.className = "diary-photo-preview-item";
+
+    // ========================================
+    // 사진 미리보기 이미지
+    // ========================================
+
+    const image = document.createElement("img");
+
+    image.className = "diary-photo-preview-image";
+
+    // 임시 이미지 URL 생성
+    const imageUrl = URL.createObjectURL(file);
+
+    photoPreviewUrls.push(imageUrl);
+
+    image.src = imageUrl;
+
+    image.alt = file.name;
+
+    // ========================================
+    // 사진 제거 버튼
+    // ========================================
+
+    const removeBtn = document.createElement("button");
+
+    removeBtn.type = "button";
+
+    removeBtn.className = "diary-photo-remove-btn";
+
+    removeBtn.textContent = "✕";
+
+    removeBtn.setAttribute("aria-label", `${file.name} 선택 취소`);
+
+    // ========================================
+    // 선택한 사진 개별 제거
+    // ========================================
+
+    removeBtn.addEventListener("click", () => {
+      // 선택한 사진 목록에서 제거
+      selectedDiaryPhotos.splice(index, 1);
+
+      // 미리보기 다시 표시
+      renderDiaryPhotoPreviews();
+
+      console.log("📸 선택한 사진 제거:", file.name);
+    });
+
+    // ========================================
+    // 사진 이름 표시
+    // ========================================
+
+    const fileName = document.createElement("span");
+
+    fileName.className = "diary-photo-file-name";
+
+    fileName.textContent = file.name;
+
+    // ========================================
+    // 카드 구성
+    // ========================================
+
+    item.appendChild(image);
+
+    item.appendChild(removeBtn);
+
+    item.appendChild(fileName);
+
+    preview.appendChild(item);
+  });
+
+  console.log("📸 사진 미리보기 표시:", selectedDiaryPhotos.length);
 }
 
 // SPA 농장 화면 전환 구분 번호
@@ -221,6 +371,191 @@ function closeDiaryForm() {
   saveBtn.disabled = false;
 
   saveBtn.textContent = defaultSaveText;
+}
+
+// ========================================
+// 📸 재배 일지 사진 갤러리
+// 여러 장 조회 및 개별 삭제
+// ========================================
+
+async function loadDiaryPhotoGallery(farmId, diaryId, gallery, screenCurrent) {
+  // ========================================
+  // 1. 현재 화면 확인
+  // ========================================
+
+  const isActive = () => {
+    return screenCurrent() && gallery.isConnected;
+  };
+
+  try {
+    // ========================================
+    // 2. 사진 목록 조회
+    // ========================================
+
+    const response = await fetch(
+      `/api/farms/${farmId}/diaries/${diaryId}/photos`,
+    );
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "사진 목록 조회 실패");
+    }
+
+    // 다른 농장으로 이동했다면 중단
+    if (!isActive()) {
+      return;
+    }
+
+    // ========================================
+    // 3. 사진 데이터 확인
+    // ========================================
+
+    if (!result.success || !Array.isArray(result.photos)) {
+      throw new Error("올바른 사진 목록이 아닙니다.");
+    }
+
+    // ========================================
+    // 4. 기존 갤러리 초기화
+    // ========================================
+
+    gallery.replaceChildren();
+
+    // 사진이 없으면 갤러리 제거
+    if (result.photos.length === 0) {
+      gallery.remove();
+      return;
+    }
+
+    // ========================================
+    // 5. 사진 카드 생성
+    // ========================================
+
+    result.photos.forEach((photo) => {
+      // 사진 카드
+      const photoItem = document.createElement("div");
+
+      photoItem.className = "diary-gallery-item";
+
+      // ========================================
+      // 📸 사진 이미지
+      // ========================================
+
+      const image = document.createElement("img");
+
+      image.className = "diary-gallery-image";
+
+      image.src = `/api/farms/${farmId}/diaries/${diaryId}/photos/${photo.id}`;
+
+      image.alt = "재배 일지 작업 사진";
+
+      image.loading = "lazy";
+
+      // 이미지 로딩 실패
+      image.addEventListener("error", () => {
+        console.error("사진 로딩 실패:", photo.id);
+
+        image.hidden = true;
+      });
+
+      // ========================================
+      // 🗑 사진 삭제 버튼
+      // ========================================
+
+      const deleteBtn = document.createElement("button");
+
+      deleteBtn.type = "button";
+
+      deleteBtn.className = "diary-gallery-delete";
+
+      deleteBtn.textContent = "✕";
+
+      deleteBtn.setAttribute("aria-label", "사진 삭제");
+
+      // ========================================
+      // 사진 개별 삭제 이벤트
+      // ========================================
+
+      deleteBtn.addEventListener("click", async () => {
+        if (!isActive()) {
+          return;
+        }
+
+        // 삭제 확인
+        const confirmed = confirm("이 사진을 삭제하시겠습니까?");
+
+        if (!confirmed) {
+          return;
+        }
+
+        // 중복 삭제 방지
+        deleteBtn.disabled = true;
+
+        try {
+          // ========================================
+          // SQLite 사진 개별 삭제 요청
+          // ========================================
+
+          const deleteResponse = await fetch(
+            `/api/farms/${farmId}/diaries/${diaryId}/photos/${photo.id}`,
+            {
+              method: "DELETE",
+            },
+          );
+
+          const deleteResult = await deleteResponse.json().catch(() => ({}));
+
+          if (!deleteResponse.ok) {
+            throw new Error(deleteResult.message || "사진 삭제 실패");
+          }
+
+          // 화면이 변경되었다면 UI 수정하지 않음
+          if (!isActive()) {
+            return;
+          }
+
+          // ========================================
+          // 삭제한 사진 카드만 제거
+          // ========================================
+
+          photoItem.remove();
+
+          // 모든 사진이 삭제되었다면 갤러리 제거
+          if (gallery.children.length === 0) {
+            gallery.remove();
+          }
+
+          console.log("🗑 사진 개별 삭제 완료:", photo.id);
+        } catch (error) {
+          console.error("사진 삭제 오류:", error);
+
+          if (isActive()) {
+            alert(error.message);
+          }
+        } finally {
+          deleteBtn.disabled = false;
+        }
+      });
+
+      // ========================================
+      // 6. 사진 카드 구성
+      // ========================================
+
+      photoItem.appendChild(image);
+
+      photoItem.appendChild(deleteBtn);
+
+      gallery.appendChild(photoItem);
+    });
+
+    console.log("📸 재배 일지 사진 갤러리 표시 완료:", result.photos.length);
+  } catch (error) {
+    console.error("사진 갤러리 조회 오류:", error);
+
+    if (isActive()) {
+      gallery.textContent = "사진을 불러오지 못했습니다.";
+    }
+  }
 }
 
 // ========================================
@@ -477,29 +812,32 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
       item.appendChild(memo);
 
       // ========================================
-      // 📸 저장된 재배 일지 사진 표시
+      // 📸 저장된 재배 일지 사진 갤러리 표시
       // ========================================
 
-      // 사진이 등록된 경우에만 표시
+      // 사진이 등록된 경우에만 갤러리 생성
       if (diary.has_photo) {
-        const photo = document.createElement("img");
+        // ========================================
+        // 1. 사진 갤러리 영역 생성
+        // ========================================
 
-        photo.className = "diary-photo";
+        const gallery = document.createElement("div");
 
-        photo.src = `/api/farms/${id}/diaries/${diary.id}/photo`;
+        gallery.className = "diary-photo-gallery";
 
-        photo.alt = `${diary.work_date} 작업 사진`;
+        gallery.textContent = "📸 사진을 불러오는 중...";
 
-        photo.loading = "lazy";
+        // ========================================
+        // 2. 재배 일지 카드에 갤러리 추가
+        // ========================================
 
-        // 이미지 로딩 실패 처리
-        photo.addEventListener("error", () => {
-          console.error("재배 일지 사진 불러오기 실패:", diary.id);
+        item.appendChild(gallery);
 
-          photo.hidden = true;
-        });
+        // ========================================
+        // 3. 사진 여러 장 조회 및 표시
+        // ========================================
 
-        item.appendChild(photo);
+        loadDiaryPhotoGallery(id, diary.id, gallery, screenCurrent);
       }
 
       // ========================================
@@ -910,55 +1248,98 @@ export function initFarmDiary(getFarmId) {
   });
 
   // ========================================
-  // 📸 사진 선택 및 미리보기
+  // 📸 사진 여러 장 선택 및 미리보기
   // ========================================
 
   photoInput.addEventListener("change", () => {
-    resetDiaryPhotoPreview();
+    // ========================================
+    // 1. 새로 선택한 사진 목록
+    // ========================================
 
-    const file = photoInput.files[0];
+    const files = Array.from(photoInput.files || []);
 
-    if (!file) {
+    // 같은 사진을 다시 선택할 수 있도록 초기화
+    photoInput.value = "";
+
+    if (files.length === 0) {
       return;
     }
 
     // ========================================
-    // 사진 형식 검사
+    // 2. 허용하는 사진 형식
     // ========================================
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
-    if (!allowedTypes.includes(file.type)) {
-      alert("JPG, PNG, WebP 사진만 등록할 수 있습니다.");
-
-      photoInput.value = "";
-      return;
-    }
-
-    // ========================================
-    // 사진 크기 검사 (3MB)
-    // ========================================
-
+    // 사진 한 장당 최대 3MB
     const maxSize = 3 * 1024 * 1024;
 
-    if (file.size > maxSize) {
-      alert("사진 크기는 최대 3MB까지 가능합니다.");
+    // ========================================
+    // 3. 사진 형식 및 크기 검사
+    // ========================================
 
-      photoInput.value = "";
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        alert("JPG, PNG, WebP 사진만 등록할 수 있습니다.");
+
+        return;
+      }
+
+      if (file.size > maxSize) {
+        alert(`${file.name}\n사진 크기는 최대 3MB까지 가능합니다.`);
+
+        return;
+      }
+    }
+
+    // ========================================
+    // 4. 중복 선택한 사진 제외
+    // ========================================
+
+    const newFiles = [];
+
+    for (const file of files) {
+      const isSameFile = (a, b) =>
+        a.name === b.name &&
+        a.size === b.size &&
+        a.lastModified === b.lastModified;
+
+      const alreadySelected = selectedDiaryPhotos.some((selected) =>
+        isSameFile(selected, file),
+      );
+
+      const alreadyAdded = newFiles.some((selected) =>
+        isSameFile(selected, file),
+      );
+
+      if (!alreadySelected && !alreadyAdded) {
+        newFiles.push(file);
+      }
+    }
+
+    // ========================================
+    // 5. 최대 10장 제한
+    // ========================================
+
+    if (selectedDiaryPhotos.length + newFiles.length > 10) {
+      alert("재배 일지에는 사진을 최대 10장까지 선택할 수 있습니다.");
+
       return;
     }
 
     // ========================================
-    // 사진 미리보기
+    // 6. 기존 선택 목록에 사진 추가
     // ========================================
 
-    photoPreviewUrl = URL.createObjectURL(file);
+    selectedDiaryPhotos.push(...newFiles);
 
-    photoPreview.src = photoPreviewUrl;
+    // ========================================
+    // 7. 미리보기 갱신
+    // ========================================
 
-    photoPreview.hidden = false;
+    renderDiaryPhotoPreviews();
 
-    console.log("📸 사진 선택 완료:", file.name);
+    console.log("📸 현재 선택한 사진:", selectedDiaryPhotos.length);
   });
 
   // ========================================
@@ -1069,17 +1450,35 @@ export function initFarmDiary(getFarmId) {
     // 📸 첨부할 사진 가져오기
     // ========================================
 
-    const photoFile = photoInput.files[0] ?? null;
+    // ========================================
+    // 📸 첨부할 사진 여러 장 가져오기
+    // ========================================
 
-    // 사진이 있다면 크기와 형식 재검사
-    if (photoFile) {
-      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    // 저장 요청 시점의 사진 목록 복사
+    const photoFiles = [...selectedDiaryPhotos];
 
-      if (
-        !allowedTypes.includes(photoFile.type) ||
-        photoFile.size > 3 * 1024 * 1024
-      ) {
+    // ========================================
+    // 사진 개수 확인
+    // ========================================
+
+    if (photoFiles.length > 10) {
+      alert("사진은 최대 10장까지 등록할 수 있습니다.");
+
+      return;
+    }
+
+    // ========================================
+    // 사진 형식 및 크기 재검사
+    // ========================================
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+    const maxSize = 3 * 1024 * 1024;
+
+    for (const file of photoFiles) {
+      if (!allowedTypes.includes(file.type) || file.size > maxSize) {
         alert("사진 형식 또는 크기를 확인해주세요.");
+
         return;
       }
     }
@@ -1148,20 +1547,21 @@ export function initFarmDiary(getFarmId) {
       console.log("📖 재배 일지 처리 완료:", result);
 
       // ========================================
-      // 📸 재배 일지 사진 업로드
+      // 📸 재배 일지 사진 여러 장 업로드
       // ========================================
 
       let photoError = null;
 
-      // 첨부한 사진이 있는 경우에만 업로드
-      if (photoFile) {
+      // ========================================
+      // 1. 첨부한 사진이 있는 경우
+      // ========================================
+
+      if (photoFiles.length > 0) {
         try {
           // ========================================
-          // 1. 저장된 재배 일지 ID 확인
+          // 2. 저장된 재배 일지 ID 확인
           // ========================================
 
-          // 수정 모드에서는 기존 일지 ID 사용
-          // 신규 작성에서는 서버가 반환한 ID 사용
           const savedDiaryId = isEditMode ? diaryId : Number(result.id);
 
           if (!Number.isSafeInteger(savedDiaryId) || savedDiaryId <= 0) {
@@ -1169,19 +1569,22 @@ export function initFarmDiary(getFarmId) {
           }
 
           // ========================================
-          // 2. 사진 업로드 데이터 생성
+          // 3. 사진 업로드 데이터 생성
           // ========================================
 
           const formData = new FormData();
 
-          formData.append("photo", photoFile);
+          // 선택한 사진 여러 장 추가
+          photoFiles.forEach((file) => {
+            formData.append("photos", file);
+          });
 
           // ========================================
-          // 3. 사진 저장 API 요청
+          // 4. 사진 여러 장 저장 API 요청
           // ========================================
 
           const photoResponse = await fetch(
-            `/api/farms/${farmId}/diaries/${savedDiaryId}/photo`,
+            `/api/farms/${farmId}/diaries/${savedDiaryId}/photos`,
             {
               method: "POST",
               body: formData,
@@ -1189,7 +1592,7 @@ export function initFarmDiary(getFarmId) {
           );
 
           // ========================================
-          // 4. 서버 응답 확인
+          // 5. 서버 응답 확인
           // ========================================
 
           const photoResult = await photoResponse.json().catch(() => ({}));
@@ -1198,12 +1601,19 @@ export function initFarmDiary(getFarmId) {
             throw new Error(photoResult.message || "사진 저장에 실패했습니다.");
           }
 
-          console.log("📸 재배 일지 사진 저장 완료:", savedDiaryId);
-        } catch (error) {
-          console.error("📸 사진 업로드 오류:", error);
+          // ========================================
+          // 6. 사진 저장 완료
+          // ========================================
 
-          // 재배 일지는 이미 저장되었으므로
-          // 사진 저장 오류만 별도로 기록
+          console.log(
+            "📸 재배 일지 사진 여러 장 저장 완료:",
+            savedDiaryId,
+            photoResult.uploadedCount,
+          );
+        } catch (error) {
+          console.error("📸 사진 여러 장 업로드 오류:", error);
+
+          // 재배 일지 본문은 이미 저장된 상태
           photoError = error;
         }
       }

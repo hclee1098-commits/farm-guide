@@ -19,6 +19,14 @@ farm-info.js	농지 정보 표시, PNU 지번 변환
 index.html	HTML 화면 구성 및 스크립트 연결
 
 
+map.js → 지도와 좌표 관리
+
+farmmap.js → 농지 경계 및 선택 관리
+
+farm-info.js → 농지 정보 표시
+
+app.js → 기능 연결 및 농장 저장
+
 
                 index.html
                     │
@@ -42,3 +50,18 @@ index.html	HTML 화면 구성 및 스크립트 연결
           │
           ▼
      위치 선택 및 마커
+	 
+	 
+	 
+           프론트엔드
+               │
+               ▼
+            server.js
+               │
+        ┌──────┴───────┐
+        │              │
+        ▼              ▼
+    SQLite DB       GeoJSON
+        │              │
+        ▼              ▼
+    농장 정보       농지 경계
