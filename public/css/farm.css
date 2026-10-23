@@ -453,3 +453,63 @@ body {
 
   background: #f8faf8;
 }
+
+/* ========================================
+   ✏️ 재배 일지 인라인 수정
+======================================== */
+
+/* 수정 중인 재배 일지 카드 */
+
+.diary-item.is-editing {
+  background: #fffaf3;
+
+  border: 2px solid #ff9800;
+
+  box-shadow: 0 3px 12px rgba(255, 152, 0, 0.12);
+}
+
+/* ========================================
+   수정 중 기존 제목 / 내용 숨기기
+======================================== */
+
+.diary-item.is-editing > h3,
+.diary-item.is-editing > p,
+.diary-item.is-editing > .diary-actions {
+  display: none;
+}
+
+/* ========================================
+   카드 내부 수정 폼
+======================================== */
+
+.diary-item.is-editing #diaryForm {
+  display: block;
+
+  margin-top: 15px;
+
+  padding: 20px;
+
+  background: white;
+
+  border: 1px solid #ffe0b2;
+
+  border-radius: 10px;
+}
+
+/* ========================================
+   수정 폼 숨김 상태
+======================================== */
+
+#diaryForm[hidden] {
+  display: none !important;
+}
+
+/* ========================================
+   모바일 화면
+======================================== */
+
+@media (max-width: 600px) {
+  .diary-item.is-editing #diaryForm {
+    padding: 15px;
+  }
+}

@@ -43,6 +43,16 @@ let diaryListRequestId = 0;
 // null이면 새로운 일지 작성
 let editingDiaryId = null;
 
+// ========================================
+// ✏️ 인라인 수정 화면 관리
+// ========================================
+
+// 작성 폼의 원래 위치
+let diaryFormAnchor = null;
+
+// 현재 수정 중인 재배 일지 카드
+let editingDiaryItem = null;
+
 // 작성 폼 변경 구분 번호
 let formRevision = 0;
 
@@ -80,7 +90,7 @@ function isFarmScreenActive(farmId, session) {
 }
 
 // ========================================
-// 4. 재배 일지 작성 폼 닫기
+// 4. 재배 일지 작성 / 수정 폼 닫기
 // ========================================
 
 function closeDiaryForm() {
@@ -90,28 +100,57 @@ function closeDiaryForm() {
 
   const { form, writeBtn, saveBtn, defaultSaveText } = formControls;
 
-  // 이전 폼 작업 무효화
+  // ========================================
+  // 1. 이전 폼 작업 무효화
+  // ========================================
+
   formRevision++;
 
-  // 수정 상태 초기화
+  // ========================================
+  // 2. 수정 중인 카드 상태 복구
+  // ========================================
+
+  if (editingDiaryItem) {
+    editingDiaryItem.classList.remove("is-editing");
+
+    editingDiaryItem = null;
+  }
+
+  // ========================================
+  // 3. 작성 폼 원래 위치로 이동
+  // ========================================
+
+  if (diaryFormAnchor?.parentNode) {
+    diaryFormAnchor.after(form);
+  }
+
+  // ========================================
+  // 4. 수정 상태 초기화
+  // ========================================
+
   editingDiaryId = null;
 
   // ========================================
-  // 입력값 초기화
+  // 5. 입력값 초기화
   // ========================================
 
   form.reset();
 
-  // 📸 사진 미리보기 초기화
+  // 사진 미리보기 초기화
   resetDiaryPhotoPreview();
 
-  // 입력 폼 숨기기
+  // ========================================
+  // 6. 작성 폼 숨기기
+  // ========================================
+
   form.hidden = true;
 
-  // 접근성 상태 변경
   writeBtn.setAttribute("aria-expanded", "false");
 
-  // 저장 버튼 초기화
+  // ========================================
+  // 7. 저장 버튼 초기화
+  // ========================================
+
   saveBtn.disabled = false;
 
   saveBtn.textContent = defaultSaveText;
@@ -188,7 +227,19 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
       throw new Error("올바른 재배 일지 데이터가 아닙니다.");
     }
 
+    // ========================================
+    // 목록 초기화 전 수정 폼 보호
+    // ========================================
+
+    if (formControls?.form && diaryList.contains(formControls.form)) {
+      // 기존 폼을 원래 위치로 돌려놓기
+      closeDiaryForm();
+    }
+
+    // ========================================
     // 기존 목록 초기화
+    // ========================================
+
     diaryList.replaceChildren();
 
     // ========================================
@@ -254,7 +305,8 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
           return;
         }
 
-        openEditDiary(diary);
+        // 해당 재배 일지 카드에서 수정 화면 열기
+        openEditDiary(diary, item);
       });
 
       // ========================================
@@ -396,36 +448,47 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
 }
 
 // ========================================
-// 6. ✏️ 재배 일지 수정 폼 열기
+// 6. ✏️ 재배 일지 인라인 수정
 // ========================================
 
-function openEditDiary(diary) {
-  if (!formControls) {
+function openEditDiary(diary, item) {
+  if (!formControls || !item) {
     return;
   }
 
   const { form, writeBtn, saveBtn, dateInput, typeInput, memoInput } =
     formControls;
 
+  // ========================================
+  // 1. 기존 작성 / 수정 폼 정리
+  // ========================================
+
+  closeDiaryForm();
+
   // 새로운 폼 작업 시작
   formRevision++;
 
-  // 수정할 재배 일지 ID 저장
+  // ========================================
+  // 2. 수정 대상 설정
+  // ========================================
+
   editingDiaryId = diary.id;
 
-  // 기존 입력값 초기화
-  form.reset();
-
-  // 📸 이전 사진 미리보기 초기화
-  resetDiaryPhotoPreview();
+  editingDiaryItem = item;
 
   // ========================================
-  // 기존 재배 일지 데이터 입력
+  // 3. 해당 카드 수정 모드 활성화
+  // ========================================
+
+  item.classList.add("is-editing");
+
+  // ========================================
+  // 4. 기존 재배 일지 데이터 입력
   // ========================================
 
   dateInput.value = diary.work_date;
 
-  // select에 기존 작업 종류가 없는 경우 추가
+  // 작업 종류가 select에 없는 경우 추가
   if (
     typeInput instanceof HTMLSelectElement &&
     !Array.from(typeInput.options).some(
@@ -440,16 +503,33 @@ function openEditDiary(diary) {
   memoInput.value = diary.memo || "";
 
   // ========================================
-  // 수정 모드 활성화
+  // 5. 작성 폼을 해당 일지 카드로 이동
+  // ========================================
+
+  const actions = item.querySelector(".diary-actions");
+
+  if (actions) {
+    // 수정 / 삭제 버튼 앞에 작성 폼 배치
+    actions.before(form);
+  } else {
+    item.appendChild(form);
+  }
+
+  // ========================================
+  // 6. 수정 폼 표시
   // ========================================
 
   form.hidden = false;
 
-  writeBtn.setAttribute("aria-expanded", "true");
+  // 새 일지 작성 버튼은 펼쳐진 상태가 아님
+  writeBtn.setAttribute("aria-expanded", "false");
 
   saveBtn.textContent = "💾 수정 저장";
 
-  // 입력 폼으로 화면 이동
+  // ========================================
+  // 7. 수정 화면으로 이동
+  // ========================================
+
   form.scrollIntoView({
     behavior: "smooth",
     block: "center",
@@ -457,9 +537,8 @@ function openEditDiary(diary) {
 
   dateInput.focus();
 
-  console.log("✏️ 재배 일지 수정 시작:", diary.id);
+  console.log("✏️ 재배 일지 인라인 수정 시작:", diary.id);
 }
-
 // ========================================
 // 7. 📖 재배 일지 작성 폼 초기화
 // ========================================
@@ -533,6 +612,15 @@ export function initFarmDiary(getFarmId) {
   };
 
   // ========================================
+  // ✏️ 작성 폼의 원래 위치 기억
+  // ========================================
+
+  diaryFormAnchor = document.createComment("재배 일지 작성 폼 원래 위치");
+
+  // 작성 폼 바로 앞에 위치 표시
+  form.before(diaryFormAnchor);
+
+  // ========================================
   // 📸 사진 선택 및 미리보기
   // ========================================
 
@@ -589,20 +677,31 @@ export function initFarmDiary(getFarmId) {
   // ========================================
 
   writeBtn.addEventListener("click", () => {
-    // 폼이 열려 있다면 닫기
-    if (!form.hidden) {
+    // ========================================
+    // 1. 새 일지 작성 폼이 이미 열려 있다면 닫기
+    // ========================================
+
+    if (!form.hidden && editingDiaryId === null) {
       closeDiaryForm();
       return;
     }
 
-    // 새로운 작성 모드
+    // ========================================
+    // 2. 기존 수정 화면 정리
+    // ========================================
+
+    closeDiaryForm();
+
+    // ========================================
+    // 3. 새 일지 작성 모드
+    // ========================================
+
     formRevision++;
 
     editingDiaryId = null;
 
     form.reset();
 
-    // 📸 사진 미리보기 초기화
     resetDiaryPhotoPreview();
 
     form.hidden = false;
@@ -612,7 +711,7 @@ export function initFarmDiary(getFarmId) {
     saveBtn.textContent = formControls.defaultSaveText;
 
     // ========================================
-    // 오늘 날짜 자동 입력
+    // 4. 오늘 날짜 자동 입력
     // ========================================
 
     const today = new Date();
