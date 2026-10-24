@@ -1,4 +1,10 @@
 // ========================================
+// 💬 공통 확인 대화상자
+// ========================================
+
+import { confirmAction } from "./components/confirm-dialog.js";
+
+// ========================================
 // 📸 공통 사진 업로드 컴포넌트
 // ========================================
 
@@ -745,9 +751,23 @@ export async function loadFarmDiaries(farmId, isCurrent = () => true) {
           return;
         }
 
-        const confirmed = confirm(
-          `${diary.work_date} 재배 일지를 삭제하시겠습니까?`,
-        );
+        // ========================================
+        // 💬 공통 삭제 확인창
+        // ========================================
+
+        const confirmed = await confirmAction({
+          title: "🗑 재배 일지 삭제",
+
+          message:
+            `${diary.work_date} 재배 일지를 삭제하시겠습니까?\n\n` +
+            "삭제한 재배 일지는 목록에서 보이지 않게 됩니다.",
+
+          confirmText: "삭제하기",
+
+          cancelText: "취소",
+
+          variant: "danger",
+        });
 
         if (!confirmed) {
           return;
