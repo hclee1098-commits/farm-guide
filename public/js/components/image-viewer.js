@@ -149,14 +149,29 @@ function createImageViewer() {
   });
 
   // ========================================
-  // 8. 사진 로딩 오류
+  // 8. 사진 로딩 상태 관리
+  // ========================================
+
+  // ========================================
+  // 사진 로딩 실패
   // ========================================
 
   image.addEventListener("error", () => {
-    message.textContent = "사진을 불러오지 못했습니다.";
+    image.hidden = true;
+
+    message.textContent =
+      "사진을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.";
+
+    console.error("📸 확대 사진 로딩 실패:", image.src);
   });
 
+  // ========================================
+  // 사진 로딩 완료
+  // ========================================
+
   image.addEventListener("load", () => {
+    image.hidden = false;
+
     message.textContent = "";
   });
 
@@ -300,6 +315,10 @@ function renderCurrentImage() {
     return;
   }
 
+  // ========================================
+  // 내부 요소
+  // ========================================
+
   const image = viewer.querySelector(".fg-image-viewer__image");
 
   const counter = viewer.querySelector(".fg-image-viewer__counter");
@@ -310,33 +329,66 @@ function renderCurrentImage() {
 
   const message = viewer.querySelector(".fg-image-viewer__message");
 
+  const stage = viewer.querySelector(".fg-image-viewer__stage");
+
+  // ========================================
+  // 현재 사진
+  // ========================================
+
   const current = viewerImages[currentImageIndex];
 
   // ========================================
-  // 이미지 표시
+  // 사진 개수 확인
   // ========================================
 
-  message.textContent = "";
-
-  image.src = current.src;
-
-  image.alt = current.alt || "확대된 사진";
+  const hasMultiple = viewerImages.length > 1;
 
   // ========================================
-  // 사진 순서
+  // 사진 한 장일 때
+  // 화면 공간 최대 활용
+  // ========================================
+
+  stage.classList.toggle("is-single", !hasMultiple);
+
+  // ========================================
+  // 이전 / 다음 버튼
+  // ========================================
+
+  prevBtn.hidden = !hasMultiple;
+
+  nextBtn.hidden = !hasMultiple;
+
+  // ========================================
+  // 사진 순서 표시
   // ========================================
 
   counter.textContent = `${currentImageIndex + 1} / ${viewerImages.length}`;
 
   // ========================================
-  // 사진이 한 장인 경우
+  // 사진 로딩 시작
   // ========================================
 
-  const hasMultiple = viewerImages.length > 1;
+  image.hidden = true;
 
-  prevBtn.hidden = !hasMultiple;
+  message.textContent = "📸 사진을 불러오는 중입니다...";
 
-  nextBtn.hidden = !hasMultiple;
+  // ========================================
+  // 이미지 정보 설정
+  // ========================================
+
+  image.alt = current.alt || "확대된 사진";
+
+  image.src = current.src;
+
+  // ========================================
+  // 브라우저 캐시에 이미지가 있는 경우
+  // ========================================
+
+  if (image.complete && image.naturalWidth > 0) {
+    image.hidden = false;
+
+    message.textContent = "";
+  }
 }
 
 // ========================================

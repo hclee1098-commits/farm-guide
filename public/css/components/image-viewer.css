@@ -286,3 +286,45 @@
 
   outline-offset: 3px;
 }
+
+/* ========================================
+   13. 사진 한 장일 때 화면 최적화
+======================================== */
+
+.fg-image-viewer__stage.is-single {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+
+/* ========================================
+   14. 사진 로딩 중 숨김
+======================================== */
+
+.fg-image-viewer__image[hidden] {
+  display: none !important;
+}
+
+/* ========================================
+   15. 사진 로딩 안내
+======================================== */
+
+.fg-image-viewer__message {
+  line-height: 1.6;
+
+  word-break: keep-all;
+}
+
+/* ========================================
+   16. 모바일 사진 표시 최적화
+======================================== */
+
+@media (max-width: 600px) {
+  .fg-image-viewer__stage.is-single {
+    grid-template-columns: 0 minmax(0, 1fr) 0;
+  }
+
+  .fg-image-viewer__message {
+    font-size: 15px;
+
+    padding: 0 12px;
+  }
+}
