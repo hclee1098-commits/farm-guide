@@ -1,0 +1,226 @@
+/* ========================================
+   🌱 농사 가이드
+   🔔 공통 Toast 알림
+======================================== */
+
+/* ========================================
+   1. Toast 기본 스타일
+======================================== */
+
+.fg-toast {
+  position: fixed;
+
+  left: 50%;
+
+  bottom: calc(28px + env(safe-area-inset-bottom));
+
+  transform: translateX(-50%);
+
+  z-index: 10000;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 14px;
+
+  width: min(420px, calc(100vw - 32px));
+
+  box-sizing: border-box;
+
+  padding: 18px 16px;
+
+  border: 2px solid transparent;
+
+  border-radius: 16px;
+
+  background: #ffffff;
+
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+
+  animation: fg-toast-enter 0.25s ease-out;
+}
+
+/* ========================================
+   2. 성공 알림
+======================================== */
+
+.fg-toast--success {
+  background: #f0fdf4;
+
+  border-color: #86efac;
+
+  color: #166534;
+}
+
+/* ========================================
+   3. 오류 알림
+======================================== */
+
+.fg-toast--error {
+  background: #fef2f2;
+
+  border-color: #fca5a5;
+
+  color: #991b1b;
+}
+
+/* ========================================
+   4. 주의 알림
+======================================== */
+
+.fg-toast--warning {
+  background: #fffbeb;
+
+  border-color: #fcd34d;
+
+  color: #92400e;
+}
+
+/* ========================================
+   5. 일반 안내
+======================================== */
+
+.fg-toast--info {
+  background: #eff6ff;
+
+  border-color: #93c5fd;
+
+  color: #1e40af;
+}
+
+/* ========================================
+   6. 알림 아이콘
+======================================== */
+
+.fg-toast__icon {
+  flex-shrink: 0;
+
+  font-size: 26px;
+
+  line-height: 1;
+}
+
+/* ========================================
+   7. 알림 메시지
+======================================== */
+
+.fg-toast__message {
+  flex: 1;
+
+  min-width: 0;
+
+  margin: 0;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  line-height: 1.6;
+
+  white-space: pre-line;
+
+  overflow-wrap: anywhere;
+}
+
+/* ========================================
+   8. 닫기 버튼
+======================================== */
+
+.fg-toast__close {
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 44px;
+
+  height: 44px;
+
+  padding: 0;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background: rgba(0, 0, 0, 0.06);
+
+  color: inherit;
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+/* ========================================
+   9. 닫기 버튼 반응
+======================================== */
+
+.fg-toast__close:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* ========================================
+   10. 키보드 접근성
+======================================== */
+
+.fg-toast__close:focus-visible {
+  outline: 3px solid #2563eb;
+
+  outline-offset: 2px;
+}
+
+/* ========================================
+   11. 알림 등장 애니메이션
+======================================== */
+
+@keyframes fg-toast-enter {
+  from {
+    opacity: 0;
+
+    transform: translate(-50%, 15px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ========================================
+   12. 모바일 화면
+======================================== */
+
+@media (max-width: 600px) {
+  .fg-toast {
+    bottom: calc(18px + env(safe-area-inset-bottom));
+
+    padding: 14px 12px;
+
+    gap: 10px;
+  }
+
+  .fg-toast__message {
+    font-size: 16px;
+  }
+
+  .fg-toast__icon {
+    font-size: 24px;
+  }
+}
+
+/* ========================================
+   13. 움직임 최소화 설정
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .fg-toast {
+    animation: none;
+  }
+}
