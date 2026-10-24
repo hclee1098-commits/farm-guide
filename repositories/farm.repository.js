@@ -1,0 +1,173 @@
+// ========================================
+// 🌱 농사 가이드 - 농장 데이터베이스 관리
+// ========================================
+
+// ========================================
+// 1. 농장 Repository 생성
+// ========================================
+
+function createFarmRepository(db) {
+  // ========================================
+  // 2. 농장 목록 조회 SQL
+  // ========================================
+
+  const selectAllFarms = db.prepare(`
+    SELECT *
+    FROM farms
+    ORDER BY id DESC
+  `);
+
+  // ========================================
+  // 3. 농장 상세 조회 SQL
+  // ========================================
+
+  const selectFarmById = db.prepare(`
+    SELECT
+      id,
+      name,
+      crop,
+      area,
+      address,
+      pnu,
+      farm_uid
+
+    FROM farms
+
+    WHERE id = ?
+  `);
+
+  // ========================================
+  // 4. 농장 존재 여부 확인 SQL
+  // ========================================
+
+  const selectFarmExists = db.prepare(`
+    SELECT id
+    FROM farms
+    WHERE id = ?
+  `);
+
+  // ========================================
+  // 5. 농장 등록 SQL
+  // ========================================
+
+  const insertFarm = db.prepare(`
+    INSERT INTO farms (
+      name,
+      crop,
+      area,
+      latitude,
+      longitude,
+      address,
+      pnu,
+      farm_uid
+    )
+
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  // ========================================
+  // 6. 농장 수정 SQL
+  // ========================================
+
+  const updateFarm = db.prepare(`
+    UPDATE farms
+
+    SET
+      name = ?,
+      crop = ?,
+      area = ?
+
+    WHERE id = ?
+  `);
+
+  // ========================================
+  // 7. 농장 삭제 SQL
+  // ========================================
+
+  const deleteFarm = db.prepare(`
+    DELETE FROM farms
+    WHERE id = ?
+  `);
+
+  // ========================================
+  // 8. 농장 목록 조회
+  // ========================================
+
+  function findAll() {
+    return selectAllFarms.all();
+  }
+
+  // ========================================
+  // 9. 농장 상세 조회
+  // ========================================
+
+  function findById(farmId) {
+    return selectFarmById.get(farmId);
+  }
+
+  // ========================================
+  // 10. 농장 존재 여부 확인
+  // ========================================
+
+  function exists(farmId) {
+    return Boolean(selectFarmExists.get(farmId));
+  }
+
+  // ========================================
+  // 11. 농장 등록
+  // ========================================
+
+  function create(farm) {
+    const result = insertFarm.run(
+      farm.name,
+      farm.crop,
+      farm.area,
+      farm.latitude,
+      farm.longitude,
+      farm.address,
+      farm.pnu,
+      farm.farm_uid,
+    );
+
+    return Number(result.lastInsertRowid);
+  }
+
+  // ========================================
+  // 12. 농장 정보 수정
+  // ========================================
+
+  function update(farmId, farm) {
+    const result = updateFarm.run(farm.name, farm.crop, farm.area, farmId);
+
+    return result.changes > 0;
+  }
+
+  // ========================================
+  // 13. 농장 삭제
+  // ========================================
+
+  function remove(farmId) {
+    const result = deleteFarm.run(farmId);
+
+    return result.changes > 0;
+  }
+
+  // ========================================
+  // 14. 외부에서 사용할 함수
+  // ========================================
+
+  return {
+    findAll,
+    findById,
+    exists,
+    create,
+    update,
+    remove,
+  };
+}
+
+// ========================================
+// 15. 모듈 내보내기
+// ========================================
+
+module.exports = createFarmRepository;
