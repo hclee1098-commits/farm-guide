@@ -19,63 +19,92 @@ function createDiaryPhotoRepository(db) {
   const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
   // ========================================
-  // 3. 재배 일지 존재 여부 확인 SQL
+  // 3. 활성 재배 일지 존재 여부 확인
+  //
+  // 농장과 재배 일지가 모두
+  // 삭제되지 않은 상태여야 한다.
   // ========================================
 
   const selectDiary = db.prepare(`
-    SELECT id
+    SELECT d.id
 
-    FROM farm_diaries
+    FROM farm_diaries d
 
-    WHERE id = ?
-      AND farm_id = ?
+    JOIN farms f
+      ON d.farm_id = f.id
+
+    WHERE d.id = ?
+      AND d.farm_id = ?
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
   `);
 
   // ========================================
-  // 4. 사진 목록 조회 SQL
-  // 삭제되지 않은 사진만 조회
+  // 4. 사진 목록 조회
+  //
+  // 삭제된 사진 제외
+  // 삭제된 재배 일지 제외
+  // 삭제된 농장 제외
   // ========================================
 
   const selectPhotos = db.prepare(`
     SELECT
+      p.id,
+      p.mime_type,
+      p.storage_provider,
+      p.storage_key,
+      p.file_size,
+      p.created_at
 
-      id,
-      mime_type,
-      storage_provider,
-      storage_key,
-      file_size,
-      created_at
+    FROM diary_photos p
 
-    FROM diary_photos
+    JOIN farm_diaries d
+      ON p.diary_id = d.id
 
-    WHERE diary_id = ?
-      AND is_deleted = 0
+    JOIN farms f
+      ON d.farm_id = f.id
 
-    ORDER BY id DESC
+    WHERE p.diary_id = ?
+      AND p.is_deleted = 0
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
+
+    ORDER BY p.id DESC
   `);
 
   // ========================================
-  // 5. 사진 개수 조회 SQL
-  // 삭제되지 않은 사진만 계산
+  // 5. 사진 개수 조회
+  //
+  // 활성 사진만 계산
+  // 최대 10장 제한에 사용
   // ========================================
 
   const countPhotos = db.prepare(`
     SELECT COUNT(*) AS count
 
-    FROM diary_photos
+    FROM diary_photos p
 
-    WHERE diary_id = ?
-      AND is_deleted = 0
+    JOIN farm_diaries d
+      ON p.diary_id = d.id
+
+    JOIN farms f
+      ON d.farm_id = f.id
+
+    WHERE p.diary_id = ?
+      AND p.is_deleted = 0
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
   `);
 
   // ========================================
-  // 6. 사진 개별 조회 SQL
-  // 기존 BLOB 및 파일 저장 방식 지원
+  // 6. 사진 개별 조회
+  //
+  // 기존 BLOB 방식 지원
+  // 신규 파일 저장 방식 지원
   // ========================================
 
   const selectPhoto = db.prepare(`
     SELECT
-
       p.id,
       p.mime_type,
       p.image_data,
@@ -87,21 +116,26 @@ function createDiaryPhotoRepository(db) {
 
     JOIN farm_diaries d
       ON p.diary_id = d.id
+
+    JOIN farms f
+      ON d.farm_id = f.id
 
     WHERE p.id = ?
       AND p.diary_id = ?
       AND d.farm_id = ?
       AND p.is_deleted = 0
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
   `);
 
   // ========================================
-  // 7. 가장 최근 사진 조회 SQL
+  // 7. 가장 최근 사진 조회
+  //
   // 기존 단일 사진 API 호환
   // ========================================
 
   const selectLatestPhoto = db.prepare(`
     SELECT
-
       p.id,
       p.mime_type,
       p.image_data,
@@ -114,9 +148,14 @@ function createDiaryPhotoRepository(db) {
     JOIN farm_diaries d
       ON p.diary_id = d.id
 
+    JOIN farms f
+      ON d.farm_id = f.id
+
     WHERE d.id = ?
       AND d.farm_id = ?
       AND p.is_deleted = 0
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
 
     ORDER BY p.id DESC
 
@@ -125,17 +164,16 @@ function createDiaryPhotoRepository(db) {
 
   // ========================================
   // 8. 기존 BLOB 사진 등록 SQL
-  // 기존 API 호환을 위해 임시 유지
+  //
+  // 기존 API 호환을 위해 유지
   // ========================================
 
   const insertLegacyPhoto = db.prepare(`
     INSERT INTO diary_photos (
-
       diary_id,
       mime_type,
       image_data,
       file_size
-
     )
 
     VALUES (?, ?, ?, ?)
@@ -143,57 +181,79 @@ function createDiaryPhotoRepository(db) {
 
   // ========================================
   // 9. 신규 파일 사진 등록 SQL
-  // 실제 사진 대신 저장 위치 기록
+  //
+  // DB에는 사진 저장 위치만 기록
   // ========================================
 
   const insertStoredPhoto = db.prepare(`
     INSERT INTO diary_photos (
-
       diary_id,
       mime_type,
       storage_provider,
       storage_key,
       file_size
-
     )
 
     VALUES (?, ?, ?, ?, ?)
   `);
 
   // ========================================
-  // 10. 사진 개별 논리 삭제 SQL
-  // 실제 데이터 삭제하지 않음
+  // 10. 사진 개별 소프트 삭제
+  //
+  // 실제 파일은 삭제하지 않는다.
   // ========================================
 
   const softDeletePhoto = db.prepare(`
     UPDATE diary_photos
 
     SET
-
       is_deleted = 1,
-
       deleted_at = CURRENT_TIMESTAMP
 
     WHERE id = ?
       AND diary_id = ?
       AND is_deleted = 0
+
+      AND EXISTS (
+        SELECT 1
+
+        FROM farm_diaries d
+
+        JOIN farms f
+          ON d.farm_id = f.id
+
+        WHERE d.id = diary_photos.diary_id
+          AND d.is_deleted = 0
+          AND f.is_deleted = 0
+      )
   `);
 
   // ========================================
-  // 11. 사진 전체 논리 삭제 SQL
+  // 11. 사진 전체 소프트 삭제
   // ========================================
 
   const softDeleteAllPhotos = db.prepare(`
     UPDATE diary_photos
 
     SET
-
       is_deleted = 1,
-
       deleted_at = CURRENT_TIMESTAMP
 
     WHERE diary_id = ?
       AND is_deleted = 0
+
+      AND EXISTS (
+        SELECT 1
+
+        FROM farm_diaries d
+
+        JOIN farms f
+          ON d.farm_id = f.id
+
+        WHERE d.id = diary_photos.diary_id
+          AND d.is_deleted = 0
+          AND f.is_deleted = 0
+      )
   `);
 
   // ========================================
@@ -221,7 +281,7 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 13. 재배 일지 존재 여부 확인
+  // 13. 활성 재배 일지 존재 여부 확인
   // ========================================
 
   function diaryExists(diaryId, farmId) {
@@ -237,7 +297,7 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 15. 사진 개수 조회
+  // 15. 활성 사진 개수 조회
   // ========================================
 
   function count(diaryId) {
@@ -255,7 +315,7 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 17. 최근 사진 조회
+  // 17. 가장 최근 사진 조회
   // ========================================
 
   function findLatest(diaryId, farmId) {
@@ -263,7 +323,40 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 18. 사진 최대 10장 제한 검사
+  // 18. 활성 재배 일지 검증
+  //
+  // 사진 저장 시 반드시 확인
+  // ========================================
+
+  function ensureActiveDiary(diaryId) {
+    const diary = db
+      .prepare(
+        `
+      SELECT d.id
+
+      FROM farm_diaries d
+
+      JOIN farms f
+        ON d.farm_id = f.id
+
+      WHERE d.id = ?
+        AND d.is_deleted = 0
+        AND f.is_deleted = 0
+    `,
+      )
+      .get(diaryId);
+
+    if (!diary) {
+      const error = new Error("존재하지 않거나 삭제된 재배 일지입니다.");
+
+      error.code = "DIARY_NOT_FOUND";
+
+      throw error;
+    }
+  }
+
+  // ========================================
+  // 19. 사진 최대 10장 제한 검사
   // ========================================
 
   function checkPhotoLimit(diaryId, newCount) {
@@ -282,43 +375,33 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 19. 기존 단일 사진 저장
-  // 사진 교체 대신 추가 방식
+  // 20. 기존 단일 사진 저장
+  //
+  // 사진 교체 대신 추가 방식 유지
   // ========================================
 
   function saveSingle(diaryId, file) {
     return runTransaction(() => {
-      // ========================================
-      // 최대 사진 개수 확인
-      // ========================================
+      // 활성 재배 일지 확인
+      ensureActiveDiary(diaryId);
 
+      // 최대 10장 제한
       checkPhotoLimit(diaryId, 1);
 
-      // ========================================
-      // 기존 BLOB 방식 저장
-      // ========================================
-
+      // 기존 BLOB 저장
       const result = insertLegacyPhoto.run(
         diaryId,
-
         file.mimetype,
-
         file.buffer,
-
         file.buffer.length,
       );
-
-      // ========================================
-      // 저장된 사진 ID 반환
-      // ========================================
 
       return Number(result.lastInsertRowid);
     });
   }
 
   // ========================================
-  // 20. 기존 사진 여러 장 저장
-  // 현재 Routes와 호환
+  // 21. 기존 사진 여러 장 저장
   // ========================================
 
   function saveMultiple(diaryId, files) {
@@ -327,58 +410,43 @@ function createDiaryPhotoRepository(db) {
     }
 
     return runTransaction(() => {
-      // ========================================
+      // 활성 재배 일지 확인
+      ensureActiveDiary(diaryId);
+
       // 최대 10장 제한
-      // ========================================
-
       checkPhotoLimit(diaryId, files.length);
-
-      // ========================================
-      // 사진 저장
-      // ========================================
 
       const savedPhotoIds = [];
 
       for (const file of files) {
         const result = insertLegacyPhoto.run(
           diaryId,
-
           file.mimetype,
-
           file.buffer,
-
           file.buffer.length,
         );
 
         savedPhotoIds.push(Number(result.lastInsertRowid));
       }
 
-      // ========================================
-      // 저장된 사진 ID 반환
-      // ========================================
-
       return savedPhotoIds;
     });
   }
 
   // ========================================
-  // 21. 신규 파일 사진 저장 정보 등록
+  // 22. 신규 파일 사진 저장 정보 등록
   //
-  // 실제 사진 파일은 storage.service.js에서
-  // 저장하고, 이 함수는 DB 정보만 기록한다.
+  // 실제 파일은 storage.service.js에서 저장
+  // DB에는 저장 위치 정보만 기록
   // ========================================
 
   function saveStoredPhotos(diaryId, storedPhotos) {
-    // ========================================
-    // 저장할 사진 정보 확인
-    // ========================================
-
     if (!Array.isArray(storedPhotos) || storedPhotos.length === 0) {
       throw new Error("저장할 사진 정보가 없습니다.");
     }
 
     // ========================================
-    // 사진 메타데이터 검증
+    // 저장 정보 검증
     // ========================================
 
     for (const photo of storedPhotos) {
@@ -401,44 +469,36 @@ function createDiaryPhotoRepository(db) {
     // ========================================
 
     return runTransaction(() => {
-      // ========================================
-      // 최대 10장 제한
-      // ========================================
+      // 활성 재배 일지 확인
+      ensureActiveDiary(diaryId);
 
+      // 최대 10장 제한
       checkPhotoLimit(diaryId, storedPhotos.length);
+
+      const savedPhotoIds = [];
 
       // ========================================
       // 사진 메타데이터 저장
       // ========================================
 
-      const savedPhotoIds = [];
-
       for (const photo of storedPhotos) {
         const result = insertStoredPhoto.run(
           diaryId,
-
           photo.mimeType,
-
           photo.storageProvider,
-
           photo.storageKey,
-
           photo.size,
         );
 
         savedPhotoIds.push(Number(result.lastInsertRowid));
       }
 
-      // ========================================
-      // 저장 결과 반환
-      // ========================================
-
       return savedPhotoIds;
     });
   }
 
   // ========================================
-  // 22. 사진 개별 논리 삭제
+  // 23. 사진 개별 소프트 삭제
   // ========================================
 
   function remove(photoId, diaryId) {
@@ -448,7 +508,7 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 23. 사진 전체 논리 삭제
+  // 24. 사진 전체 소프트 삭제
   // ========================================
 
   function removeAll(diaryId) {
@@ -458,7 +518,7 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
-  // 24. 외부에서 사용할 함수
+  // 25. 외부에서 사용할 함수
   // ========================================
 
   return {
@@ -485,7 +545,7 @@ function createDiaryPhotoRepository(db) {
 }
 
 // ========================================
-// 25. 모듈 내보내기
+// 26. 모듈 내보내기
 // ========================================
 
 module.exports = createDiaryPhotoRepository;
