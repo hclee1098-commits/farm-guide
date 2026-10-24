@@ -160,7 +160,7 @@ function createImageViewer() {
     image.hidden = true;
 
     message.textContent =
-      "사진을 불러오지 못했습니다. 인터넷 연결을 확인해주세요.";
+      "사진을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.";
 
     console.error("📸 확대 사진 로딩 실패:", image.src);
   });
@@ -267,9 +267,17 @@ function createImageViewer() {
     // ========================================
 
     if (event.key === "Tab") {
+      // ========================================
+      // 현재 화면에서 키보드 접근 가능한 버튼
+      // ========================================
+
       const buttons = Array.from(viewer.querySelectorAll("button")).filter(
         (button) => {
-          return !button.hidden && !button.disabled;
+          return (
+            !button.hidden &&
+            !button.disabled &&
+            button.getClientRects().length > 0
+          );
         },
       );
 

@@ -90,6 +90,26 @@ export function createDiaryPhotoSlider(track) {
   track.addEventListener("scroll", updateButtons);
 
   // ========================================
+  // 📸 이미지 로딩 완료 시 버튼 상태 갱신
+  // ========================================
+
+  function handleImageLoadChange() {
+    requestAnimationFrame(updateButtons);
+  }
+
+  // ========================================
+  // 이미지 로딩 완료 감지
+  // ========================================
+
+  track.addEventListener("load", handleImageLoadChange, true);
+
+  // ========================================
+  // 이미지 로딩 실패 감지
+  // ========================================
+
+  track.addEventListener("error", handleImageLoadChange, true);
+
+  // ========================================
   // 7. 마우스 드래그 상태
   // ========================================
 
@@ -243,9 +263,25 @@ export function createDiaryPhotoSlider(track) {
   // ========================================
 
   slider.cleanup = () => {
+    // ========================================
+    // 화면 크기 감지 종료
+    // ========================================
+
     resizeObserver.disconnect();
 
+    // ========================================
+    // 사진 추가 / 삭제 감지 종료
+    // ========================================
+
     mutationObserver.disconnect();
+
+    // ========================================
+    // 이미지 로딩 이벤트 정리
+    // ========================================
+
+    track.removeEventListener("load", handleImageLoadChange, true);
+
+    track.removeEventListener("error", handleImageLoadChange, true);
   };
 
   requestAnimationFrame(updateButtons);

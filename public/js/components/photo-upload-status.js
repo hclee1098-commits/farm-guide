@@ -95,9 +95,23 @@ export function createPhotoUploadStatus(target, options = {}) {
     // 사진 개수 정리
     // ========================================
 
-    const saved = Math.max(0, savedCount);
+    // ========================================
+    // 사진 개수 안전하게 변환
+    // ========================================
 
-    const pending = Math.max(0, pendingCount);
+    function normalizeCount(value) {
+      const count = Number(value);
+
+      if (!Number.isSafeInteger(count) || count < 0) {
+        return 0;
+      }
+
+      return count;
+    }
+
+    const saved = normalizeCount(savedCount);
+
+    const pending = normalizeCount(pendingCount);
 
     const total = saved + pending;
 
@@ -139,6 +153,20 @@ export function createPhotoUploadStatus(target, options = {}) {
       container.dataset.state = "saving";
 
       message.textContent = "⏳ 사진을 저장하고 있습니다. 잠시 기다려주세요.";
+
+      return;
+    }
+
+    // ========================================
+    // 기존 사진 조회 중
+    // ========================================
+
+    if (loading) {
+      container.dataset.state = "loading";
+
+      message.textContent =
+        "⏳ 기존 사진을 확인하고 있습니다. " +
+        "조회가 완료되면 사진을 추가할 수 있습니다.";
 
       return;
     }

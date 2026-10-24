@@ -19,7 +19,10 @@ import { showToast } from "./components/toast.js";
 // 💬 공통 확인 대화상자
 // ========================================
 
-import { confirmAction } from "./components/confirm-dialog.js";
+import {
+  confirmAction,
+  closeConfirmDialog,
+} from "./components/confirm-dialog.js";
 
 // ========================================
 // 📸 공통 사진 업로드 컴포넌트
@@ -2276,6 +2279,18 @@ export function initFarmDiary(getFarmId) {
 // ========================================
 
 export function resetFarmDiaryForm() {
+  // ========================================
+  // SPA 화면 전환 시 확인창 닫기
+  // ========================================
+
+  closeConfirmDialog();
+
+  // ========================================
+  // SPA 화면 전환 시 이미지 확대 종료
+  // ========================================
+
+  closeImageViewer();
+
   // ========================================
   // 이전 농장 세션 무효화
   // ========================================
