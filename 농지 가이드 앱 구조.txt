@@ -46,44 +46,67 @@ farm-guide/
 ├── server.js
 │
 ├── db/
-│   │
 │   ├── database.js
-│   │
-│   ├── init.js
-│   │
-│   └── migrations/
-│       │
-│       ├── 001_farms.js
-│       │
-│       ├── 002_farm_diaries.js
-│       │
-│       ├── 003_diary_photos.js
-│       │
-│       └── 004_soft_delete.js
-│
-├── repositories/
-│   │
-│   ├── farm.repository.js
-│   ├── diary.repository.js
-│   └── photo.repository.js
+│   └── init.js
 │
 ├── routes/
-│   │
 │   ├── farm.routes.js
 │   ├── diary.routes.js
-│   ├── photo.routes.js
+│   ├── diary-photo.routes.js
 │   └── farmmap.routes.js
 │
-├── services/
-│   │
-│   ├── farm.service.js
-│   ├── diary.service.js
-│   └── photo.service.js
+├── repositories/
+│   ├── farm.repository.js
+│   ├── diary.repository.js
+│   └── diary-photo.repository.js
 │
-└── storage/
-    │
-    ├── photo-storage.js
-    └── local-storage.js
+├── services/
+│   ├── diary-photo.service.js
+│   └── storage/
+│       ├── storage.service.js
+│       ├── local.storage.js
+│       └── cloud.storage.js
+│
+├── storage/
+│   └── photos/
+│
+└── ...
+
+
+
+
+>>>> 이어서 작동순서
+(예시)
+[사용자 브라우저]
+        │
+        ▼
+GET /api/farms
+        │
+        ▼
+[server.js]
+        │
+        ▼
+[routes/farm.routes.js]
+        │
+        ▼
+farmRepository.findAll()
+        │
+        ▼
+[repositories/farm.repository.js]
+        │
+        ▼
+SELECT * FROM farms
+        │
+        ▼
+[SQLite]
+        │
+        ▼
+조회 결과 반환
+        │
+        ▼
+[사용자 브라우저]
+
+
 
 
 	
