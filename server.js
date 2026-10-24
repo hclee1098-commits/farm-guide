@@ -4,9 +4,17 @@
 
 // 모듈 불러오기
 const express = require("express");
-const { DatabaseSync } = require("node:sqlite");
+// const { DatabaseSync } = require("node:sqlite");
 const path = require("path");
 const fs = require("fs");
+
+// ========================================
+// 🌱 데이터베이스 관리 모듈
+// ========================================
+
+const db = require("./db/database");
+
+const { initializeDatabase } = require("./db/init");
 
 // ========================================
 // 🌱 팜맵 API 라우터
@@ -157,90 +165,96 @@ app.use(
 app.use("/api/farmmap", farmmapRouter);
 
 // ========================================
-// 4. SQLite 데이터베이스 연결
+// 4. 데이터베이스 초기화
 // ========================================
 
-console.log("데이터베이스 연결 시작...");
+initializeDatabase(db);
 
-const db = new DatabaseSync(path.join(__dirname, "farm-guide.db"));
+// // ========================================
+// // 4. SQLite 데이터베이스 연결
+// // ========================================
 
-// ========================================
-// 🌱 SQLite 외래 키 제약 조건 활성화
-// ========================================
+// console.log("데이터베이스 연결 시작...");
 
-db.exec("PRAGMA foreign_keys = ON");
+// const db = new DatabaseSync(path.join(__dirname, "farm-guide.db"));
 
-console.log("SQLite 외래 키 활성화 완료!");
+// // ========================================
+// // 🌱 SQLite 외래 키 제약 조건 활성화
+// // ========================================
 
-console.log("데이터베이스 연결 성공!");
+// db.exec("PRAGMA foreign_keys = ON");
 
-// ========================================
-// 5. 농장 정보 테이블 생성
-// ========================================
+// console.log("SQLite 외래 키 활성화 완료!");
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS farms (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    crop TEXT,
-    area REAL,
-    latitude REAL,
-    longitude REAL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+// console.log("데이터베이스 연결 성공!");
 
-console.log("농장 테이블 생성 완료!");
+// // ========================================
+// // 5. 농장 정보 테이블 생성
+// // ========================================
 
-// ========================================
-// 농장 데이터베이스 확장
-// ========================================
+// db.exec(`
+//   CREATE TABLE IF NOT EXISTS farms (
+//     id INTEGER PRIMARY KEY AUTOINCREMENT,
+//     name TEXT NOT NULL,
+//     crop TEXT,
+//     area REAL,
+//     latitude REAL,
+//     longitude REAL,
+//     created_at TEXT DEFAULT CURRENT_TIMESTAMP
+//   )
+// `);
 
-// 기존 farms 테이블의 컬럼 확인
-const columns = db.prepare("PRAGMA table_info(farms)").all();
+// console.log("농장 테이블 생성 완료!");
 
-const columnNames = columns.map((column) => column.name);
+// // ========================================
+// // 농장 데이터베이스 확장
+// // ========================================
 
-// ========================================
-// 농지 주소 컬럼 추가
-// ========================================
+// // 기존 farms 테이블의 컬럼 확인
+// const columns = db.prepare("PRAGMA table_info(farms)").all();
 
-if (!columnNames.includes("address")) {
-  db.exec(`
-    ALTER TABLE farms
-    ADD COLUMN address TEXT
-  `);
+// const columnNames = columns.map((column) => column.name);
 
-  console.log("농지 주소 컬럼 추가 완료!");
-}
+// // ========================================
+// // 농지 주소 컬럼 추가
+// // ========================================
 
-// ========================================
-// PNU 컬럼 추가
-// ========================================
+// if (!columnNames.includes("address")) {
+//   db.exec(`
+//     ALTER TABLE farms
+//     ADD COLUMN address TEXT
+//   `);
 
-if (!columnNames.includes("pnu")) {
-  db.exec(`
-    ALTER TABLE farms
-    ADD COLUMN pnu TEXT
-  `);
+//   console.log("농지 주소 컬럼 추가 완료!");
+// }
 
-  console.log("PNU 컬럼 추가 완료!");
-}
+// // ========================================
+// // PNU 컬럼 추가
+// // ========================================
 
-console.log("농장 데이터베이스 확장 완료!");
+// if (!columnNames.includes("pnu")) {
+//   db.exec(`
+//     ALTER TABLE farms
+//     ADD COLUMN pnu TEXT
+//   `);
 
-// ========================================
-// 🌱 팜맵 농지 UID 컬럼 추가
-// ========================================
+//   console.log("PNU 컬럼 추가 완료!");
+// }
 
-if (!columnNames.includes("farm_uid")) {
-  db.exec(`
-    ALTER TABLE farms
-    ADD COLUMN farm_uid TEXT
-  `);
+// console.log("농장 데이터베이스 확장 완료!");
 
-  console.log("🌱 농지 UID 컬럼 추가 완료!");
-}
+// // ========================================
+// // 🌱 팜맵 농지 UID 컬럼 추가
+// // ========================================
+
+// if (!columnNames.includes("farm_uid")) {
+//   db.exec(`
+//     ALTER TABLE farms
+//     ADD COLUMN farm_uid TEXT
+//   `);
+
+//   console.log("🌱 농지 UID 컬럼 추가 완료!");
+// }
 
 // ========================================
 // 6. 농장 목록 조회 API
@@ -893,191 +907,191 @@ app.put("/api/farms/:id", (req, res) => {
 // // 🌱 재배 일지 테이블 생성
 // // ========================================
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS farm_diaries (
+// db.exec(`
+//   CREATE TABLE IF NOT EXISTS farm_diaries (
 
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+//     id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    farm_id INTEGER NOT NULL,
+//     farm_id INTEGER NOT NULL,
 
-    work_date TEXT NOT NULL,
+//     work_date TEXT NOT NULL,
 
-    work_type TEXT NOT NULL,
+//     work_type TEXT NOT NULL,
 
-    memo TEXT NOT NULL DEFAULT '',
+//     memo TEXT NOT NULL DEFAULT '',
 
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+//     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (farm_id)
-      REFERENCES farms(id)
-      ON DELETE CASCADE
-  )
-`);
+//     FOREIGN KEY (farm_id)
+//       REFERENCES farms(id)
+//       ON DELETE CASCADE
+//   )
+// `);
 
-console.log("🌱 재배 일지 테이블 생성 완료!");
+// console.log("🌱 재배 일지 테이블 생성 완료!");
 
-// ========================================
-// 📸 재배 일지 사진 테이블
-// 여러 장 첨부 지원
-// ========================================
+// // ========================================
+// // 📸 재배 일지 사진 테이블
+// // 여러 장 첨부 지원
+// // ========================================
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS diary_photos (
+// db.exec(`
+//   CREATE TABLE IF NOT EXISTS diary_photos (
 
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+//     id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    diary_id INTEGER NOT NULL,
+//     diary_id INTEGER NOT NULL,
 
-    mime_type TEXT NOT NULL,
+//     mime_type TEXT NOT NULL,
 
-    image_data BLOB NOT NULL,
+//     image_data BLOB NOT NULL,
 
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+//     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (diary_id)
-      REFERENCES farm_diaries(id)
-      ON DELETE CASCADE
-  )
-`);
+//     FOREIGN KEY (diary_id)
+//       REFERENCES farm_diaries(id)
+//       ON DELETE CASCADE
+//   )
+// `);
 
-console.log("📸 재배 일지 사진 테이블 확인 완료!");
+// console.log("📸 재배 일지 사진 테이블 확인 완료!");
 
-// ========================================
-// 📸 기존 사진 테이블 구조 확인
-// ========================================
+// // ========================================
+// // 📸 기존 사진 테이블 구조 확인
+// // ========================================
 
-// 기존 UNIQUE 제약 조건 확인
-const photoIndexes = db.prepare("PRAGMA index_list('diary_photos')").all();
+// // 기존 UNIQUE 제약 조건 확인
+// const photoIndexes = db.prepare("PRAGMA index_list('diary_photos')").all();
 
-const hasUniqueDiaryId = photoIndexes.some((index) => {
-  if (index.unique !== 1) {
-    return false;
-  }
+// const hasUniqueDiaryId = photoIndexes.some((index) => {
+//   if (index.unique !== 1) {
+//     return false;
+//   }
 
-  // SQLite에서 반환한 인덱스 이름
-  const safeIndexName = index.name.replaceAll("'", "''");
+//   // SQLite에서 반환한 인덱스 이름
+//   const safeIndexName = index.name.replaceAll("'", "''");
 
-  const indexColumns = db
-    .prepare(`PRAGMA index_info('${safeIndexName}')`)
-    .all();
+//   const indexColumns = db
+//     .prepare(`PRAGMA index_info('${safeIndexName}')`)
+//     .all();
 
-  return indexColumns.length === 1 && indexColumns[0].name === "diary_id";
-});
+//   return indexColumns.length === 1 && indexColumns[0].name === "diary_id";
+// });
 
-// ========================================
-// 📸 기존 사진 데이터 마이그레이션
-// ========================================
+// // ========================================
+// // 📸 기존 사진 데이터 마이그레이션
+// // ========================================
 
-if (hasUniqueDiaryId) {
-  console.log("📸 기존 사진 테이블 구조 변경 시작...");
+// if (hasUniqueDiaryId) {
+//   console.log("📸 기존 사진 테이블 구조 변경 시작...");
 
-  try {
-    // 데이터베이스 트랜잭션 시작
-    db.exec("BEGIN IMMEDIATE");
+//   try {
+//     // 데이터베이스 트랜잭션 시작
+//     db.exec("BEGIN IMMEDIATE");
 
-    // ========================================
-    // 1. 새로운 사진 테이블 생성
-    // ========================================
+//     // ========================================
+//     // 1. 새로운 사진 테이블 생성
+//     // ========================================
 
-    db.exec(`
-      CREATE TABLE diary_photos_new (
+//     db.exec(`
+//       CREATE TABLE diary_photos_new (
 
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+//         id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        diary_id INTEGER NOT NULL,
+//         diary_id INTEGER NOT NULL,
 
-        mime_type TEXT NOT NULL,
+//         mime_type TEXT NOT NULL,
 
-        image_data BLOB NOT NULL,
+//         image_data BLOB NOT NULL,
 
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+//         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 
-        FOREIGN KEY (diary_id)
-          REFERENCES farm_diaries(id)
-          ON DELETE CASCADE
-      )
-    `);
+//         FOREIGN KEY (diary_id)
+//           REFERENCES farm_diaries(id)
+//           ON DELETE CASCADE
+//       )
+//     `);
 
-    // ========================================
-    // 2. 기존 사진 데이터 복사
-    // ========================================
+//     // ========================================
+//     // 2. 기존 사진 데이터 복사
+//     // ========================================
 
-    db.exec(`
-      INSERT INTO diary_photos_new (
-        id,
-        diary_id,
-        mime_type,
-        image_data,
-        created_at
-      )
+//     db.exec(`
+//       INSERT INTO diary_photos_new (
+//         id,
+//         diary_id,
+//         mime_type,
+//         image_data,
+//         created_at
+//       )
 
-      SELECT
-        id,
-        diary_id,
-        mime_type,
-        image_data,
-        created_at
+//       SELECT
+//         id,
+//         diary_id,
+//         mime_type,
+//         image_data,
+//         created_at
 
-      FROM diary_photos
-    `);
+//       FROM diary_photos
+//     `);
 
-    // ========================================
-    // 3. 기존 테이블 제거
-    // ========================================
+//     // ========================================
+//     // 3. 기존 테이블 제거
+//     // ========================================
 
-    db.exec("DROP TABLE diary_photos");
+//     db.exec("DROP TABLE diary_photos");
 
-    // ========================================
-    // 4. 새로운 테이블 이름 변경
-    // ========================================
+//     // ========================================
+//     // 4. 새로운 테이블 이름 변경
+//     // ========================================
 
-    db.exec(`
-      ALTER TABLE diary_photos_new
-      RENAME TO diary_photos
-    `);
+//     db.exec(`
+//       ALTER TABLE diary_photos_new
+//       RENAME TO diary_photos
+//     `);
 
-    // ========================================
-    // 5. 변경 사항 확정
-    // ========================================
+//     // ========================================
+//     // 5. 변경 사항 확정
+//     // ========================================
 
-    db.exec("COMMIT");
+//     db.exec("COMMIT");
 
-    console.log("📸 사진 테이블 마이그레이션 완료!");
-  } catch (error) {
-    // 오류 발생 시 기존 상태로 복구
-    try {
-      db.exec("ROLLBACK");
-    } catch (rollbackError) {
-      console.error("사진 테이블 복구 오류:", rollbackError);
-    }
+//     console.log("📸 사진 테이블 마이그레이션 완료!");
+//   } catch (error) {
+//     // 오류 발생 시 기존 상태로 복구
+//     try {
+//       db.exec("ROLLBACK");
+//     } catch (rollbackError) {
+//       console.error("사진 테이블 복구 오류:", rollbackError);
+//     }
 
-    console.error("사진 테이블 변경 실패:", error);
+//     console.error("사진 테이블 변경 실패:", error);
 
-    throw error;
-  }
-}
+//     throw error;
+//   }
+// }
 
-// ========================================
-// 📸 사진 조회 인덱스 생성
-// ========================================
+// // ========================================
+// // 📸 사진 조회 인덱스 생성
+// // ========================================
 
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_diary_photos_diary_id
-  ON diary_photos(diary_id, id DESC)
-`);
+// db.exec(`
+//   CREATE INDEX IF NOT EXISTS idx_diary_photos_diary_id
+//   ON diary_photos(diary_id, id DESC)
+// `);
 
-console.log("📸 재배 일지 사진 테이블 준비 완료!");
+// console.log("📸 재배 일지 사진 테이블 준비 완료!");
 
-// ========================================
-// 재배 일지 조회 속도 개선
-// ========================================
+// // ========================================
+// // 재배 일지 조회 속도 개선
+// // ========================================
 
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_farm_diaries_farm_date
-  ON farm_diaries(farm_id, work_date DESC, id DESC)
-`);
+// db.exec(`
+//   CREATE INDEX IF NOT EXISTS idx_farm_diaries_farm_date
+//   ON farm_diaries(farm_id, work_date DESC, id DESC)
+// `);
 
-console.log("🌱 재배 일지 인덱스 생성 완료!");
+// console.log("🌱 재배 일지 인덱스 생성 완료!");
 
 // ========================================
 // 🌱 농장별 재배 일지 조회 API

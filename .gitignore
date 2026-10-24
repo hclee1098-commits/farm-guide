@@ -33,3 +33,6 @@ Thumbs.db
 
 # 개인 IDE 설정
 .vscode/
+
+# 백업 파일
+backup/

@@ -40,6 +40,54 @@ farm-guide/
 		
 		
 		
+서버 구조	
+farm-guide/
+│
+├── server.js
+│
+├── db/
+│   │
+│   ├── database.js
+│   │
+│   ├── init.js
+│   │
+│   └── migrations/
+│       │
+│       ├── 001_farms.js
+│       │
+│       ├── 002_farm_diaries.js
+│       │
+│       ├── 003_diary_photos.js
+│       │
+│       └── 004_soft_delete.js
+│
+├── repositories/
+│   │
+│   ├── farm.repository.js
+│   ├── diary.repository.js
+│   └── photo.repository.js
+│
+├── routes/
+│   │
+│   ├── farm.routes.js
+│   ├── diary.routes.js
+│   ├── photo.routes.js
+│   └── farmmap.routes.js
+│
+├── services/
+│   │
+│   ├── farm.service.js
+│   ├── diary.service.js
+│   └── photo.service.js
+│
+└── storage/
+    │
+    ├── photo-storage.js
+    └── local-storage.js
+
+
+	
+		
 farm-view.js
      │
      ├── farm-diary.js
@@ -153,3 +201,29 @@ farm-view.js
         ├── 사진 파일 저장
         │
         └── SQLite에 사진 정보 저장
+		
+		
+		
+동작순서	
+farm-diary.js
+     │
+     │ 사진 업로드 요청
+     ▼
+photo.routes.js
+     │
+     │ 요청 검증 및 전달
+     ▼
+photo.service.js
+     │
+     ├─────────────────────┐
+     │                     │
+     ▼                     ▼
+storage.service.js    photo.repository.js
+     │                     │
+     ▼                     ▼
+사진 파일 저장         SQLite 메타데이터 저장
+     │                     │
+     └──────────┬──────────┘
+                │
+                ▼
+           저장 결과 반환
