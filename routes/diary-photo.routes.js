@@ -277,6 +277,21 @@ function createDiaryPhotoRouter(db) {
       } catch (error) {
         console.error("단일 사진 저장 오류:", error);
 
+        // ========================================
+        // 최대 10장 제한 오류 처리
+        // ========================================
+
+        if (error.code === "PHOTO_LIMIT_EXCEEDED") {
+          return res.status(400).json({
+            success: false,
+            message: error.message,
+          });
+        }
+
+        // ========================================
+        // 일반 서버 오류
+        // ========================================
+
         return res.status(500).json({
           success: false,
           message: "사진을 저장하지 못했습니다.",
