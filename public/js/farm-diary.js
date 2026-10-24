@@ -910,13 +910,21 @@ async function loadDiaryPhotoGallery(farmId, diaryId, gallery, screenCurrent) {
     // ========================================
 
     if (result.photos.length === 0) {
+      // ========================================
+      // 목록 슬라이더 찾기
+      // ========================================
+
       const slider = gallery.closest(".diary-slider");
+
+      // ========================================
+      // 슬라이더 및 Observer 정리
+      // ========================================
 
       if (slider) {
         destroyDiarySlider(slider);
-
-        slider.remove();
       }
+
+      console.log("📸 등록된 사진 없음 - 목록 슬라이더 제거");
 
       return;
     }
