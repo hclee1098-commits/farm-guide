@@ -826,3 +826,512 @@ body {
     height: 120px;
   }
 }
+
+/* ========================================
+   📸 재배 일지 사진 가로 슬라이더
+======================================== */
+
+/* ========================================
+   1. 슬라이더 전체 영역
+======================================== */
+
+.diary-slider {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  gap: 8px;
+
+  margin: 14px 0;
+}
+
+.diary-slider[hidden] {
+  display: none !important;
+}
+
+/* ========================================
+   2. 사진 가로 배치
+======================================== */
+
+.diary-slider-track.diary-photo-gallery,
+.diary-slider-track.diary-photo-previews,
+.diary-slider-track.diary-existing-photo-list {
+  display: flex !important;
+
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+
+  gap: 10px;
+
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+
+  padding: 5px 2px;
+
+  margin: 0;
+
+  scrollbar-width: thin;
+  scrollbar-color: #a5d6a7 #f1f8e9;
+}
+
+/* ========================================
+   3. 사진 카드 크기 고정
+======================================== */
+
+.diary-slider-track .diary-gallery-item,
+.diary-slider-track .diary-photo-preview-item {
+  position: relative;
+
+  flex: 0 0 145px;
+
+  width: 145px;
+  min-width: 145px;
+
+  scroll-snap-align: start;
+
+  border-radius: 10px;
+
+  overflow: hidden;
+
+  background: #f8faf8;
+
+  border: 1px solid #e5e7eb;
+}
+
+/* ========================================
+   4. 사진 이미지 크기
+======================================== */
+
+.diary-slider-track .diary-gallery-image,
+.diary-slider-track .diary-photo-preview-image {
+  display: block;
+
+  width: 100%;
+  height: 130px;
+
+  object-fit: cover;
+}
+
+/* ========================================
+   5. 좌우 이동 버튼
+======================================== */
+
+.diary-slider-arrow {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 34px;
+
+  width: 34px;
+  height: 34px;
+
+  padding: 0;
+
+  border: 1px solid #c8e6c9;
+  border-radius: 50%;
+
+  background: #e8f5e9;
+  color: #2e7d32;
+
+  font-size: 20px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: background 0.2s;
+}
+
+.diary-slider-arrow:hover {
+  background: #c8e6c9;
+}
+
+.diary-slider-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.diary-slider-arrow[hidden] {
+  display: none !important;
+}
+
+/* ========================================
+   6. 수정 화면 기존 사진 영역
+======================================== */
+
+.diary-existing-photo {
+  width: 100%;
+  min-width: 0;
+}
+
+.diary-existing-photo .diary-slider {
+  width: 100%;
+}
+
+/* ========================================
+   7. 수정 중 목록 사진 숨기기
+======================================== */
+
+.diary-item.is-editing > .diary-slider {
+  display: none;
+}
+
+/* ========================================
+   8. 모바일 사진 슬라이더
+======================================== */
+
+@media (max-width: 480px) {
+  .diary-slider {
+    gap: 5px;
+  }
+
+  .diary-slider-track .diary-gallery-item,
+  .diary-slider-track .diary-photo-preview-item {
+    flex: 0 0 120px;
+
+    width: 120px;
+    min-width: 120px;
+  }
+
+  .diary-slider-track .diary-gallery-image,
+  .diary-slider-track .diary-photo-preview-image {
+    height: 115px;
+  }
+
+  .diary-slider-arrow {
+    flex: 0 0 28px;
+
+    width: 28px;
+    height: 28px;
+
+    font-size: 16px;
+  }
+}
+
+/* ========================================
+   🖱 재배 일지 사진 마우스 드래그
+======================================== */
+
+/* ========================================
+   1. 기본 마우스 커서
+======================================== */
+
+.diary-slider-track {
+  cursor: grab;
+
+  user-select: none;
+
+  -webkit-user-select: none;
+}
+
+/* ========================================
+   2. 마우스로 사진 드래그 중
+======================================== */
+
+.diary-slider-track.is-dragging {
+  cursor: grabbing;
+
+  /* 드래그 중에는 즉시 이동 */
+  scroll-behavior: auto !important;
+
+  /* 드래그 중 사진 위치 강제 정렬 방지 */
+  scroll-snap-type: none !important;
+
+  user-select: none;
+
+  -webkit-user-select: none;
+}
+
+/* ========================================
+   3. 이미지 선택 방지
+======================================== */
+
+.diary-slider-track img {
+  user-select: none;
+
+  -webkit-user-select: none;
+
+  -webkit-user-drag: none;
+}
+
+/* ========================================
+   4. 모바일 터치 스크롤
+======================================== */
+
+@media (max-width: 600px) {
+  .diary-slider-track {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ========================================
+   📸 재배 일지 사진 가로 슬라이더
+======================================== */
+
+/* ========================================
+   1. 재배 일지 카드
+======================================== */
+
+.diary-item {
+  min-width: 0;
+}
+
+/* ========================================
+   2. 슬라이더 전체
+======================================== */
+
+.diary-slider {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  margin: 12px 0;
+}
+
+/* ========================================
+   3. 사진 가로 트랙
+======================================== */
+
+.diary-slider .diary-slider-track {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+
+  align-items: stretch;
+
+  gap: 10px;
+
+  flex: 1 1 0;
+  min-width: 0;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+
+  scrollbar-width: none;
+
+  cursor: grab;
+
+  user-select: none;
+  -webkit-user-select: none;
+
+  touch-action: auto;
+}
+
+/* Chrome, Safari 스크롤바 숨김 */
+
+.diary-slider-track::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================
+   4. 마우스 드래그 중
+======================================== */
+
+.diary-slider-track.is-dragging {
+  cursor: grabbing;
+
+  scroll-behavior: auto !important;
+  scroll-snap-type: none !important;
+}
+
+/* ========================================
+   5. 좌우 화살표
+======================================== */
+
+.diary-slider-arrow {
+  flex: 0 0 32px;
+
+  width: 32px;
+  height: 42px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #e8f3e9;
+  color: #287c3a;
+
+  font-size: 28px;
+  font-weight: bold;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diary-slider-arrow:hover:not(:disabled) {
+  background: #cfe8d2;
+}
+
+.diary-slider-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ========================================
+   6. 사진 카드
+======================================== */
+
+.diary-slider-track > .diary-gallery-item,
+.diary-slider-track > .diary-photo-preview-item {
+  position: relative;
+
+  flex: 0 0 145px;
+
+  width: 145px;
+  min-width: 145px;
+
+  scroll-snap-align: start;
+}
+
+/* ========================================
+   7. 사진 이미지
+======================================== */
+
+.diary-slider-track .diary-gallery-image,
+.diary-slider-track .diary-photo-preview-image {
+  display: block;
+
+  width: 100%;
+  height: 125px;
+
+  object-fit: cover;
+
+  border-radius: 8px;
+
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ========================================
+   8. 수정 화면 사진 삭제 버튼
+======================================== */
+
+.diary-slider-track .diary-gallery-delete,
+.diary-slider-track .diary-photo-remove-btn {
+  position: absolute;
+
+  top: 5px;
+  right: 5px;
+
+  width: 26px;
+  height: 26px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+
+  font-size: 16px;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 2;
+}
+
+.diary-slider-track .diary-gallery-delete:hover,
+.diary-slider-track .diary-photo-remove-btn:hover {
+  background: #d93025;
+}
+
+/* ========================================
+   9. 새 사진 파일 이름
+======================================== */
+
+.diary-photo-file-name {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 12px;
+  color: #666;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ========================================
+   10. 수정 화면 기존 사진 영역
+======================================== */
+
+.diary-existing-photo {
+  width: 100%;
+  min-width: 0;
+
+  margin: 12px 0;
+}
+
+.diary-existing-photo > p {
+  margin-bottom: 8px;
+
+  font-weight: 600;
+}
+
+/* ========================================
+   11. 숨김 상태 우선 적용
+======================================== */
+
+.diary-slider[hidden],
+.diary-existing-photo[hidden],
+#diaryPhotoPreview[hidden] {
+  display: none !important;
+}
+
+/* ========================================
+   12. 모바일 화면
+======================================== */
+
+@media (max-width: 600px) {
+  .diary-slider {
+    gap: 5px;
+  }
+
+  .diary-slider-arrow {
+    flex-basis: 28px;
+
+    width: 28px;
+    height: 38px;
+
+    font-size: 24px;
+  }
+
+  .diary-slider-track > .diary-gallery-item,
+  .diary-slider-track > .diary-photo-preview-item {
+    flex-basis: 115px;
+
+    width: 115px;
+    min-width: 115px;
+  }
+
+  .diary-slider-track .diary-gallery-image,
+  .diary-slider-track .diary-photo-preview-image {
+    height: 105px;
+  }
+}

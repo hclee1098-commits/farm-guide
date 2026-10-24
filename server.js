@@ -44,7 +44,19 @@ require("dotenv").config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+// ========================================
+// 🌱 JSON 응답 보기 좋게 정렬
+// 개발 환경에서만 적용
+// ========================================
+
+if (process.env.NODE_ENV !== "production") {
+  app.set("json spaces", 2);
+}
+
+// ========================================
 // JSON 데이터 처리
+// ========================================
+
 app.use(express.json());
 
 // 환경변수 확인
