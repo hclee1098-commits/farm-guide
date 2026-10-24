@@ -11,6 +11,12 @@ const express = require("express");
 
 const multer = require("multer");
 
+// ========================================
+// 📸 사진 중복 검사용 해시 생성
+// ========================================
+
+const crypto = require("node:crypto");
+
 const createDiaryPhotoRepository = require("../repositories/diary-photo.repository");
 
 const {
@@ -150,6 +156,97 @@ function createDiaryPhotoRouter(db) {
   }
 
   // ========================================
+  // 📸 재배 일지 사진 중복 검사
+  // ========================================
+
+  async function filterDuplicatePhotos(farmId, diaryId, files) {
+    // ========================================
+    // 1. 현재 등록된 사진 조회
+    // ========================================
+
+    const existingPhotos = photoRepository.findAll(diaryId);
+
+    const photoHashes = new Set();
+
+    // ========================================
+    // 2. 기존 사진 해시 생성
+    // ========================================
+
+    for (const photo of existingPhotos) {
+      const savedPhoto = photoRepository.findById(photo.id, diaryId, farmId);
+
+      if (!savedPhoto) {
+        continue;
+      }
+
+      let imageBuffer;
+
+      // ========================================
+      // 기존 BLOB 사진
+      // ========================================
+
+      if (savedPhoto.image_data != null) {
+        imageBuffer = Buffer.from(savedPhoto.image_data);
+      } else {
+        // ========================================
+        // 로컬 파일 저장 사진
+        // ========================================
+
+        imageBuffer = await getPhoto(
+          savedPhoto.storage_key,
+          savedPhoto.storage_provider || "local",
+        );
+      }
+
+      const hash = crypto
+        .createHash("sha256")
+        .update(imageBuffer)
+        .digest("hex");
+
+      photoHashes.add(hash);
+    }
+
+    // ========================================
+    // 3. 새 사진 중복 검사
+    // ========================================
+
+    const uniqueFiles = [];
+
+    let duplicateCount = 0;
+
+    for (const file of files) {
+      const hash = crypto
+        .createHash("sha256")
+        .update(file.buffer)
+        .digest("hex");
+
+      // ========================================
+      // 이미 등록된 사진 또는
+      // 이번 요청에서 중복 선택한 사진
+      // ========================================
+
+      if (photoHashes.has(hash)) {
+        duplicateCount++;
+
+        continue;
+      }
+
+      photoHashes.add(hash);
+
+      uniqueFiles.push(file);
+    }
+
+    // ========================================
+    // 4. 검사 결과 반환
+    // ========================================
+
+    return {
+      uniqueFiles,
+      duplicateCount,
+    };
+  }
+
+  // ========================================
   // 8. 사진 업로드 공통 처리
   // ========================================
 
@@ -236,6 +333,22 @@ function createDiaryPhotoRouter(db) {
           }
 
           // ========================================
+          // 📸 사진 중복 검사
+          // ========================================
+
+          const { uniqueFiles, duplicateCount } = await filterDuplicatePhotos(
+            farmId,
+            diaryId,
+            files,
+          );
+
+          console.log("📸 사진 중복 검사:", {
+            전체선택: files.length,
+            신규사진: uniqueFiles.length,
+            중복사진: duplicateCount,
+          });
+
+          // ========================================
           // 현재 사진 개수 확인
           // ========================================
 
@@ -245,7 +358,7 @@ function createDiaryPhotoRouter(db) {
           // 최대 10장 제한
           // ========================================
 
-          if (existingCount + files.length > MAX_PHOTOS) {
+          if (existingCount + uniqueFiles.length > MAX_PHOTOS) {
             return res.status(400).json({
               success: false,
 
@@ -259,32 +372,40 @@ function createDiaryPhotoRouter(db) {
           // 9. 사진 파일 저장
           // ========================================
 
+          // ========================================
+          // 📸 중복되지 않은 사진만 저장
+          // ========================================
+
           const storedPhotos = [];
 
-          let savedPhotoIds;
+          let savedPhotoIds = [];
 
           try {
             // ========================================
-            // 실제 사진 파일 저장
+            // 신규 사진만 파일 저장
             // ========================================
 
-            for (const file of files) {
+            for (const file of uniqueFiles) {
               const storedPhoto = await savePhoto(file, "diary");
 
               storedPhotos.push(storedPhoto);
             }
 
             // ========================================
-            // SQLite 저장 정보 등록
-            //
-            // Repository 내부에서
-            // 최대 10장 제한 재확인
+            // 신규 사진이 있을 때만 DB 등록
             // ========================================
 
-            savedPhotoIds = photoRepository.saveStoredPhotos(
-              diaryId,
-              storedPhotos,
-            );
+            if (storedPhotos.length > 0) {
+              savedPhotoIds = photoRepository.saveStoredPhotos(
+                diaryId,
+                storedPhotos,
+              );
+            }
+
+            console.log("📸 사진 저장 결과:", {
+              저장완료: savedPhotoIds.length,
+              중복제외: duplicateCount,
+            });
           } catch (error) {
             // ========================================
             // 10. 저장 실패 복구
@@ -351,29 +472,48 @@ function createDiaryPhotoRouter(db) {
           }
 
           // ========================================
-          // 11. 단일 사진 응답
+          // 📸 사진 업로드 결과
+          // ========================================
+
+          const uploadedCount = savedPhotoIds.length;
+
+          const statusCode = uploadedCount > 0 ? 201 : 200;
+
+          // ========================================
+          // 기존 단일 사진 API
           // ========================================
 
           if (isSingle) {
-            return res.status(201).json({
+            return res.status(statusCode).json({
               success: true,
 
-              message: "사진이 저장되었습니다.",
+              message:
+                uploadedCount > 0
+                  ? "사진이 저장되었습니다."
+                  : "이미 등록된 사진입니다.",
+
+              uploadedCount,
+
+              duplicateCount,
             });
           }
 
           // ========================================
-          // 12. 여러 장 사진 응답
+          // 여러 장 사진 업로드 API
           // ========================================
 
-          return res.status(201).json({
+          return res.status(statusCode).json({
             success: true,
 
-            message: `${savedPhotoIds.length}장의 사진이 저장되었습니다.`,
+            message:
+              `${uploadedCount}장의 사진이 저장되었습니다. ` +
+              `${duplicateCount}장의 중복 사진은 제외했습니다.`,
 
             diaryId,
 
-            uploadedCount: savedPhotoIds.length,
+            uploadedCount,
+
+            duplicateCount,
 
             photoIds: savedPhotoIds,
           });
