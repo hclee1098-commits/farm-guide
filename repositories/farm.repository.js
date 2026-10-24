@@ -9,11 +9,16 @@
 function createFarmRepository(db) {
   // ========================================
   // 2. 농장 목록 조회 SQL
+  // 삭제되지 않은 농장만 조회
   // ========================================
 
   const selectAllFarms = db.prepare(`
     SELECT *
+
     FROM farms
+
+    WHERE is_deleted = 0
+
     ORDER BY id DESC
   `);
 
@@ -34,6 +39,7 @@ function createFarmRepository(db) {
     FROM farms
 
     WHERE id = ?
+      AND is_deleted = 0
   `);
 
   // ========================================
@@ -42,8 +48,11 @@ function createFarmRepository(db) {
 
   const selectFarmExists = db.prepare(`
     SELECT id
+
     FROM farms
+
     WHERE id = ?
+      AND is_deleted = 0
   `);
 
   // ========================================
@@ -67,6 +76,7 @@ function createFarmRepository(db) {
 
   // ========================================
   // 6. 농장 수정 SQL
+  // 삭제된 농장은 수정 불가
   // ========================================
 
   const updateFarm = db.prepare(`
@@ -78,15 +88,23 @@ function createFarmRepository(db) {
       area = ?
 
     WHERE id = ?
+      AND is_deleted = 0
   `);
 
   // ========================================
-  // 7. 농장 삭제 SQL
+  // 7. 농장 소프트 삭제 SQL
+  // 실제 데이터는 삭제하지 않음
   // ========================================
 
   const deleteFarm = db.prepare(`
-    DELETE FROM farms
+    UPDATE farms
+
+    SET
+      is_deleted = 1,
+      deleted_at = CURRENT_TIMESTAMP
+
     WHERE id = ?
+      AND is_deleted = 0
   `);
 
   // ========================================
@@ -133,7 +151,7 @@ function createFarmRepository(db) {
   }
 
   // ========================================
-  // 12. 농장 정보 수정
+  // 12. 농장 수정
   // ========================================
 
   function update(farmId, farm) {
@@ -143,7 +161,7 @@ function createFarmRepository(db) {
   }
 
   // ========================================
-  // 13. 농장 삭제
+  // 13. 농장 소프트 삭제
   // ========================================
 
   function remove(farmId) {

@@ -8,7 +8,7 @@
 
 function createDiaryRepository(db) {
   // ========================================
-  // 2. 농장 존재 여부 확인 SQL
+  // 2. 활성 농장 존재 여부 확인
   // ========================================
 
   const selectFarm = db.prepare(`
@@ -17,11 +17,12 @@ function createDiaryRepository(db) {
     FROM farms
 
     WHERE id = ?
+      AND is_deleted = 0
   `);
 
   // ========================================
-  // 3. 농장별 재배 일지 목록 조회 SQL
-  // 사진 첨부 여부 포함
+  // 3. 농장별 재배 일지 목록 조회
+  // 삭제된 농장과 일지는 제외
   // ========================================
 
   const selectDiaries = db.prepare(`
@@ -34,11 +35,18 @@ function createDiaryRepository(db) {
         FROM diary_photos p
 
         WHERE p.diary_id = d.id
+          AND p.is_deleted = 0
+
       ) AS has_photo
 
     FROM farm_diaries d
 
+    JOIN farms f
+      ON d.farm_id = f.id
+
     WHERE d.farm_id = ?
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
 
     ORDER BY
       d.work_date DESC,
@@ -46,16 +54,21 @@ function createDiaryRepository(db) {
   `);
 
   // ========================================
-  // 4. 재배 일지 상세 조회 SQL
+  // 4. 재배 일지 상세 조회
   // ========================================
 
   const selectDiary = db.prepare(`
-    SELECT *
+    SELECT d.*
 
-    FROM farm_diaries
+    FROM farm_diaries d
 
-    WHERE id = ?
-      AND farm_id = ?
+    JOIN farms f
+      ON d.farm_id = f.id
+
+    WHERE d.id = ?
+      AND d.farm_id = ?
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
   `);
 
   // ========================================
@@ -75,6 +88,7 @@ function createDiaryRepository(db) {
 
   // ========================================
   // 6. 재배 일지 수정 SQL
+  // 삭제된 일지는 수정 불가
   // ========================================
 
   const updateDiary = db.prepare(`
@@ -87,20 +101,41 @@ function createDiaryRepository(db) {
 
     WHERE id = ?
       AND farm_id = ?
+      AND is_deleted = 0
+
+      AND EXISTS (
+        SELECT 1
+
+        FROM farms f
+
+        WHERE f.id = farm_diaries.farm_id
+          AND f.is_deleted = 0
+      )
   `);
 
   // ========================================
-  // 7. 재배 일지 삭제 SQL
+  // 7. 재배 일지 소프트 삭제 SQL
   // ========================================
 
-  // 현재는 기존 기능 유지
-  // 추후 소프트 삭제 방식으로 변경 예정
-
   const deleteDiary = db.prepare(`
-    DELETE FROM farm_diaries
+    UPDATE farm_diaries
+
+    SET
+      is_deleted = 1,
+      deleted_at = CURRENT_TIMESTAMP
 
     WHERE id = ?
       AND farm_id = ?
+      AND is_deleted = 0
+
+      AND EXISTS (
+        SELECT 1
+
+        FROM farms f
+
+        WHERE f.id = farm_diaries.farm_id
+          AND f.is_deleted = 0
+      )
   `);
 
   // ========================================
@@ -134,6 +169,18 @@ function createDiaryRepository(db) {
   // ========================================
 
   function create(farmId, diary) {
+    // ========================================
+    // 삭제된 농장에는 일지 등록 불가
+    // ========================================
+
+    if (!farmExists(farmId)) {
+      const error = new Error("존재하지 않거나 삭제된 농장입니다.");
+
+      error.code = "FARM_NOT_FOUND";
+
+      throw error;
+    }
+
     const result = insertDiary.run(
       farmId,
       diary.work_date,
@@ -161,7 +208,7 @@ function createDiaryRepository(db) {
   }
 
   // ========================================
-  // 13. 재배 일지 삭제
+  // 13. 재배 일지 소프트 삭제
   // ========================================
 
   function remove(diaryId, farmId) {

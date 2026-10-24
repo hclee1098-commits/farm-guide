@@ -83,6 +83,33 @@ function initializeDatabase(db) {
     console.log("농지 UID 컬럼 추가 완료!");
   }
 
+  // ========================================
+  // 🌱 농장 소프트 삭제 컬럼 추가
+  // ========================================
+
+  if (!columnNames.includes("is_deleted")) {
+    db.exec(`
+      ALTER TABLE farms
+      ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0
+      CHECK (is_deleted IN (0, 1))
+    `);
+
+    console.log("🌱 농장 삭제 상태 컬럼 추가 완료!");
+  }
+
+  // ========================================
+  // 🌱 농장 삭제 일시 컬럼 추가
+  // ========================================
+
+  if (!columnNames.includes("deleted_at")) {
+    db.exec(`
+      ALTER TABLE farms
+      ADD COLUMN deleted_at TEXT
+    `);
+
+    console.log("🌱 농장 삭제 일시 컬럼 추가 완료!");
+  }
+
   console.log("🌱 농장 테이블 구조 확인 완료!");
 
   // ========================================
@@ -111,6 +138,41 @@ function initializeDatabase(db) {
   `);
 
   console.log("🌱 재배 일지 테이블 확인 완료!");
+
+  // ========================================
+  // 📖 재배 일지 테이블 컬럼 확인
+  // ========================================
+
+  const diaryColumns = db.prepare("PRAGMA table_info(farm_diaries)").all();
+
+  const diaryColumnNames = new Set(diaryColumns.map((column) => column.name));
+
+  // ========================================
+  // 📖 재배 일지 소프트 삭제 컬럼 추가
+  // ========================================
+
+  if (!diaryColumnNames.has("is_deleted")) {
+    db.exec(`
+      ALTER TABLE farm_diaries
+      ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0
+      CHECK (is_deleted IN (0, 1))
+    `);
+
+    console.log("📖 재배 일지 삭제 상태 컬럼 추가 완료!");
+  }
+
+  // ========================================
+  // 📖 재배 일지 삭제 일시 컬럼 추가
+  // ========================================
+
+  if (!diaryColumnNames.has("deleted_at")) {
+    db.exec(`
+      ALTER TABLE farm_diaries
+      ADD COLUMN deleted_at TEXT
+    `);
+
+    console.log("📖 재배 일지 삭제 일시 컬럼 추가 완료!");
+  }
 
   // ========================================
   // 8. 재배 일지 사진 테이블 생성
@@ -431,6 +493,50 @@ function initializeDatabase(db) {
   `);
 
   console.log("🌱 재배 일지 조회 인덱스 확인 완료!");
+
+  // ========================================
+  // 🌱 농장 삭제 데이터 정리 인덱스
+  // ========================================
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_farms_deleted
+
+    ON farms (
+      is_deleted,
+      deleted_at
+    )
+  `);
+
+  // ========================================
+  // 📖 재배 일지 삭제 데이터 정리 인덱스
+  // ========================================
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_farm_diaries_deleted
+
+    ON farm_diaries (
+      is_deleted,
+      deleted_at
+    )
+  `);
+
+  // ========================================
+  // 📖 활성 재배 일지 조회 인덱스
+  // ========================================
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_farm_diaries_active
+
+    ON farm_diaries (
+      farm_id,
+      work_date DESC,
+      id DESC
+    )
+
+    WHERE is_deleted = 0
+  `);
+
+  console.log("🌱 소프트 삭제 관련 인덱스 확인 완료!");
 
   // ========================================
   // 14. 초기화 완료
