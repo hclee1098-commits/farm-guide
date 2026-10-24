@@ -128,6 +128,8 @@ function initializeDatabase(db) {
 
       image_data BLOB,
 
+      storage_provider TEXT,
+
       storage_key TEXT,
 
       file_size INTEGER,
@@ -196,6 +198,7 @@ function initializeDatabase(db) {
   // ========================================
 
   const requiredPhotoColumns = [
+    "storage_provider",
     "storage_key",
     "file_size",
     "is_deleted",
@@ -229,6 +232,8 @@ function initializeDatabase(db) {
 
       const oldImageData = oldColumn("image_data", "NULL");
 
+      const oldStorageProvider = oldColumn("storage_provider", "NULL");
+
       const oldStorageKey = oldColumn("storage_key", "NULL");
 
       const oldFileSize = oldColumn("file_size", "LENGTH(image_data)");
@@ -261,6 +266,8 @@ function initializeDatabase(db) {
           mime_type TEXT NOT NULL,
 
           image_data BLOB,
+
+          storage_provider TEXT,
 
           storage_key TEXT,
 
@@ -296,6 +303,7 @@ function initializeDatabase(db) {
           diary_id,
           mime_type,
           image_data,
+          storage_provider,
           storage_key,
           file_size,
           is_deleted,
@@ -310,6 +318,7 @@ function initializeDatabase(db) {
           diary_id,
           mime_type,
           ${oldImageData},
+          ${oldStorageProvider},
           ${oldStorageKey},
           ${oldFileSize},
           ${oldIsDeleted},
