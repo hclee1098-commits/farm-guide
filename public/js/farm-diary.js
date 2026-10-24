@@ -1,4 +1,13 @@
 // ========================================
+// 📸 공통 이미지 확대 컴포넌트
+// ========================================
+
+import {
+  openImageViewer,
+  closeImageViewer,
+} from "./components/image-viewer.js";
+
+// ========================================
 // 🌱 농사 가이드 - 재배 일지 관리
 // ========================================
 
@@ -80,6 +89,83 @@ function isFarmScreenActive(farmId, session) {
 // ========================================
 // 📸 사진 가로 슬라이더 생성
 // ========================================
+
+// ========================================
+// 📸 재배 일지 사진 확대 연결
+// ========================================
+
+function enableDiaryImageViewer(image, container) {
+  if (!image || !container) {
+    return;
+  }
+
+  // ========================================
+  // 키보드 접근성
+  // ========================================
+
+  image.tabIndex = 0;
+
+  image.setAttribute("role", "button");
+
+  image.setAttribute("aria-label", `${image.alt || "사진"} 확대 보기`);
+
+  // ========================================
+  // 사진 확대 실행
+  // ========================================
+
+  function openViewer() {
+    // 현재 영역에 표시된 사진 수집
+    const images = Array.from(container.querySelectorAll("img")).filter(
+      (img) => {
+        return !img.hidden && Boolean(img.src);
+      },
+    );
+
+    if (images.length === 0) {
+      return;
+    }
+
+    // 클릭한 사진 위치
+    const index = images.indexOf(image);
+
+    if (index === -1) {
+      return;
+    }
+
+    // 공통 이미지 뷰어에 전달할 데이터
+    const viewerImages = images.map((img) => {
+      return {
+        src: img.currentSrc || img.src,
+
+        alt: img.alt || "재배 일지 사진",
+      };
+    });
+
+    // ========================================
+    // 공통 이미지 뷰어 열기
+    // ========================================
+
+    openImageViewer(viewerImages, index, image);
+  }
+
+  // ========================================
+  // 마우스 클릭
+  // ========================================
+
+  image.addEventListener("click", openViewer);
+
+  // ========================================
+  // 키보드 Enter / Space
+  // ========================================
+
+  image.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+
+      openViewer();
+    }
+  });
+}
 
 function createDiaryPhotoSlider(track) {
   const slider = document.createElement("div");
@@ -168,7 +254,8 @@ function createDiaryPhotoSlider(track) {
   let suppressNextClick = false;
 
   // ========================================
-  // 마우스 누르기
+  // 🖱 마우스 누르기
+  // 클릭과 드래그 구분
   // ========================================
 
   track.addEventListener("pointerdown", (event) => {
@@ -176,7 +263,10 @@ function createDiaryPhotoSlider(track) {
       return;
     }
 
-    // 삭제 버튼 등은 드래그 대상에서 제외
+    // ========================================
+    // 버튼은 드래그 대상에서 제외
+    // ========================================
+
     if (
       event.target instanceof Element &&
       event.target.closest("button, a, input")
@@ -184,17 +274,32 @@ function createDiaryPhotoSlider(track) {
       return;
     }
 
+    // ========================================
+    // 마우스 시작 위치 기록
+    // ========================================
+
     isMouseDown = true;
+
     isDragging = false;
 
     startX = event.clientX;
+
     startScrollLeft = track.scrollLeft;
 
-    track.setPointerCapture(event.pointerId);
+    // ========================================
+    // 중요!
+    //
+    // 여기서는 setPointerCapture를
+    // 실행하지 않는다.
+    //
+    // 실제 드래그가 시작될 때만
+    // 포인터를 캡처한다.
+    // ========================================
   });
 
   // ========================================
-  // 마우스 이동
+  // 🖱 마우스 이동
+  // 실제 드래그 시작 시에만 포인터 캡처
   // ========================================
 
   track.addEventListener("pointermove", (event) => {
@@ -202,17 +307,40 @@ function createDiaryPhotoSlider(track) {
       return;
     }
 
+    // ========================================
+    // 마우스 이동 거리 계산
+    // ========================================
+
     const moveX = event.clientX - startX;
+
+    // ========================================
+    // 5px 이상 이동하면 드래그 시작
+    // ========================================
 
     if (!isDragging && Math.abs(moveX) > 5) {
       isDragging = true;
 
       track.classList.add("is-dragging");
+
+      // ========================================
+      // 실제 드래그가 시작된 경우에만
+      // 포인터 캡처
+      // ========================================
+
+      track.setPointerCapture(event.pointerId);
     }
+
+    // ========================================
+    // 일반 클릭이면 스크롤하지 않음
+    // ========================================
 
     if (!isDragging) {
       return;
     }
+
+    // ========================================
+    // 사진 슬라이더 가로 이동
+    // ========================================
 
     track.scrollLeft = startScrollLeft - moveX;
   });
@@ -350,6 +478,8 @@ function cleanupDiarySliders(container) {
 // ========================================
 
 function resetDiaryPhotoPreview() {
+  closeImageViewer();
+
   const preview = document.getElementById("diaryPhotoPreview");
 
   const photoInput = document.getElementById("diaryPhoto");
@@ -389,6 +519,13 @@ function renderDiaryPhotoPreviews() {
   }
 
   const slider = preview.closest(".diary-slider");
+
+  // ========================================
+  // 기존 확대 화면 닫기
+  // 임시 이미지 URL 해제 전 실행
+  // ========================================
+
+  closeImageViewer();
 
   // 기존 임시 URL 정리
   photoPreviewUrls.forEach((url) => {
@@ -440,6 +577,8 @@ function renderDiaryPhotoPreviews() {
     image.src = imageUrl;
     image.alt = file.name;
     image.draggable = false;
+
+    enableDiaryImageViewer(image, preview);
 
     // ========================================
     // 선택 취소 버튼
@@ -608,6 +747,12 @@ async function showExistingDiaryPhoto(diary) {
       image.draggable = false;
 
       // ========================================
+      // 📸 기존 등록 사진 확대
+      // ========================================
+
+      enableDiaryImageViewer(image, existingPhotoList);
+
+      // ========================================
       // 사진 개별 삭제 버튼
       // ========================================
 
@@ -681,6 +826,9 @@ async function showExistingDiaryPhoto(diary) {
           // ========================================
           // 삭제한 사진만 제거
           // ========================================
+
+          // 확대 화면이 열려 있다면 닫기
+          closeImageViewer();
 
           item.remove();
 
@@ -868,6 +1016,12 @@ async function loadDiaryPhotoGallery(farmId, diaryId, gallery, screenCurrent) {
       image.alt = "재배 일지 작업 사진";
       image.loading = "lazy";
       image.draggable = false;
+
+      // ========================================
+      // 📸 재배 일지 목록 사진 확대
+      // ========================================
+
+      enableDiaryImageViewer(image, gallery);
 
       image.addEventListener("error", () => {
         console.error("사진 로딩 실패:", photo.id);
