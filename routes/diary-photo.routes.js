@@ -1,5 +1,6 @@
 // ========================================
-// 🌱 농사 가이드 - 재배 일지 사진 API
+// 🌱 농사 가이드
+// 📸 재배 일지 사진 API
 // ========================================
 
 // ========================================
@@ -11,6 +12,12 @@ const express = require("express");
 const multer = require("multer");
 
 const createDiaryPhotoRepository = require("../repositories/diary-photo.repository");
+
+const {
+  savePhoto,
+  getPhoto,
+  deletePhotoFile,
+} = require("../services/storage/storage.service");
 
 // ========================================
 // 2. 사진 라우터 생성
@@ -29,12 +36,15 @@ function createDiaryPhotoRouter(db) {
   // 4. 사진 업로드 설정
   // ========================================
 
+  const MAX_PHOTOS = 10;
+
   const photoUpload = multer({
     storage: multer.memoryStorage(),
 
     limits: {
       fileSize: 3 * 1024 * 1024,
-      files: 10,
+
+      files: MAX_PHOTOS,
     },
   });
 
@@ -47,7 +57,7 @@ function createDiaryPhotoRouter(db) {
   }
 
   // ========================================
-  // 6. 이미지 파일 형식 검증
+  // 6. 이미지 파일 검증
   // ========================================
 
   function isValidImage(file) {
@@ -60,7 +70,7 @@ function createDiaryPhotoRouter(db) {
     const imageData = file.buffer;
 
     // ========================================
-    // JPEG 확인
+    // JPEG
     // ========================================
 
     const isJpeg =
@@ -71,7 +81,7 @@ function createDiaryPhotoRouter(db) {
       imageData[2] === 0xff;
 
     // ========================================
-    // PNG 확인
+    // PNG
     // ========================================
 
     const isPng =
@@ -80,7 +90,7 @@ function createDiaryPhotoRouter(db) {
       imageData.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"));
 
     // ========================================
-    // WebP 확인
+    // WebP
     // ========================================
 
     const isWebp =
@@ -94,214 +104,295 @@ function createDiaryPhotoRouter(db) {
 
   // ========================================
   // 7. 이미지 응답 공통 함수
+  // BLOB 및 파일 저장 방식 모두 지원
   // ========================================
 
-  function sendImage(res, photo) {
+  async function sendImage(res, photo) {
+    let imageBuffer;
+
+    // ========================================
+    // 기존 BLOB 사진
+    // ========================================
+
+    if (photo.image_data !== null && photo.image_data !== undefined) {
+      imageBuffer = Buffer.from(photo.image_data);
+    } else {
+      // ========================================
+      // 신규 파일 저장 사진
+      // ========================================
+
+      if (!photo.storage_key) {
+        throw new Error("사진 저장 위치 정보가 없습니다.");
+      }
+
+      imageBuffer = await getPhoto(
+        photo.storage_key,
+
+        photo.storage_provider || "local",
+      );
+    }
+
+    // ========================================
+    // 응답 헤더
+    // ========================================
+
     res.set("Cache-Control", "no-store");
 
     res.set("X-Content-Type-Options", "nosniff");
 
     res.type(photo.mime_type);
 
-    return res.send(Buffer.from(photo.image_data));
+    // ========================================
+    // 이미지 반환
+    // ========================================
+
+    return res.send(imageBuffer);
   }
 
   // ========================================
-  // 8. 사진 여러 장 업로드
-  // POST /:farmId/diaries/:diaryId/photos
+  // 8. 사진 업로드 공통 처리
   // ========================================
 
-  router.post("/:farmId/diaries/:diaryId/photos", (req, res) => {
-    photoUpload.array("photos", 10)(req, res, (uploadError) => {
-      if (uploadError) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "사진 업로드에 실패했습니다. " +
-            "사진은 최대 10장, 한 장당 3MB까지 가능합니다.",
-        });
-      }
+  function createUploadHandler(isSingle = false) {
+    const uploadMiddleware = isSingle
+      ? photoUpload.single("photo")
+      : photoUpload.array("photos", MAX_PHOTOS);
 
-      try {
+    return (req, res) => {
+      uploadMiddleware(req, res, async (uploadError) => {
         // ========================================
-        // 농장 및 일지 ID
+        // 업로드 오류
         // ========================================
 
-        const farmId = Number(req.params.farmId);
-
-        const diaryId = Number(req.params.diaryId);
-
-        if (!isValidId(farmId) || !isValidId(diaryId)) {
+        if (uploadError) {
           return res.status(400).json({
             success: false,
-            message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
+
+            message:
+              "사진 업로드에 실패했습니다. " +
+              "사진은 최대 10장, 한 장당 3MB까지 가능합니다.",
           });
         }
 
-        // ========================================
-        // 업로드 파일 확인
-        // ========================================
+        try {
+          // ========================================
+          // 농장 및 일지 ID
+          // ========================================
 
-        const files = req.files || [];
+          const farmId = Number(req.params.farmId);
 
-        if (files.length === 0) {
-          return res.status(400).json({
-            success: false,
-            message: "등록할 사진을 선택해주세요.",
-          });
-        }
+          const diaryId = Number(req.params.diaryId);
 
-        // ========================================
-        // 재배 일지 존재 여부
-        // ========================================
-
-        if (!photoRepository.diaryExists(diaryId, farmId)) {
-          return res.status(404).json({
-            success: false,
-            message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
-          });
-        }
-
-        // ========================================
-        // 이미지 형식 검증
-        // ========================================
-
-        for (const file of files) {
-          if (!isValidImage(file)) {
+          if (!isValidId(farmId) || !isValidId(diaryId)) {
             return res.status(400).json({
               success: false,
-              message: "JPG, PNG, WebP 사진만 등록할 수 있습니다.",
+
+              message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
             });
           }
-        }
 
-        // ========================================
-        // 사진 여러 장 저장
-        // ========================================
+          // ========================================
+          // 업로드 파일 확인
+          // ========================================
 
-        const savedPhotoIds = photoRepository.saveMultiple(diaryId, files);
+          const files = isSingle
+            ? req.file
+              ? [req.file]
+              : []
+            : req.files || [];
 
-        console.log(
-          "📸 사진 여러 장 저장 완료:",
-          diaryId,
-          savedPhotoIds.length,
-        );
+          if (files.length === 0) {
+            return res.status(400).json({
+              success: false,
 
-        // ========================================
-        // 저장 결과
-        // ========================================
+              message: "등록할 사진을 선택해주세요.",
+            });
+          }
 
-        return res.status(201).json({
-          success: true,
+          // ========================================
+          // 재배 일지 존재 여부
+          // ========================================
 
-          message: `${savedPhotoIds.length}장의 사진이 저장되었습니다.`,
+          if (!photoRepository.diaryExists(diaryId, farmId)) {
+            return res.status(404).json({
+              success: false,
 
-          diaryId,
+              message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
+            });
+          }
 
-          uploadedCount: savedPhotoIds.length,
+          // ========================================
+          // 이미지 형식 검증
+          // ========================================
 
-          photoIds: savedPhotoIds,
-        });
-      } catch (error) {
-        console.error("사진 여러 장 저장 오류:", error);
+          for (const file of files) {
+            if (!isValidImage(file)) {
+              return res.status(400).json({
+                success: false,
 
-        if (error.code === "PHOTO_LIMIT_EXCEEDED") {
-          return res.status(400).json({
+                message: "JPG, PNG, WebP 사진만 등록할 수 있습니다.",
+              });
+            }
+          }
+
+          // ========================================
+          // 현재 사진 개수 확인
+          // ========================================
+
+          const existingCount = photoRepository.count(diaryId);
+
+          // ========================================
+          // 최대 10장 제한
+          // ========================================
+
+          if (existingCount + files.length > MAX_PHOTOS) {
+            return res.status(400).json({
+              success: false,
+
+              message:
+                `현재 ${existingCount}장의 사진이 등록되어 있습니다. ` +
+                `재배 일지 하나에는 최대 ${MAX_PHOTOS}장까지 등록할 수 있습니다.`,
+            });
+          }
+
+          // ========================================
+          // 9. 사진 파일 저장
+          // ========================================
+
+          const storedPhotos = [];
+
+          let savedPhotoIds;
+
+          try {
+            // ========================================
+            // 실제 사진 파일 저장
+            // ========================================
+
+            for (const file of files) {
+              const storedPhoto = await savePhoto(file, "diary");
+
+              storedPhotos.push(storedPhoto);
+            }
+
+            // ========================================
+            // SQLite 저장 정보 등록
+            //
+            // Repository 내부에서
+            // 최대 10장 제한 재확인
+            // ========================================
+
+            savedPhotoIds = photoRepository.saveStoredPhotos(
+              diaryId,
+              storedPhotos,
+            );
+          } catch (error) {
+            // ========================================
+            // 10. 저장 실패 복구
+            //
+            // 이번 요청에서 새로 저장한
+            // 파일만 정리한다.
+            // ========================================
+
+            const cleanupResults = await Promise.allSettled(
+              storedPhotos.map((photo) =>
+                deletePhotoFile(
+                  photo.storageKey,
+
+                  photo.storageProvider,
+                ),
+              ),
+            );
+
+            // ========================================
+            // 파일 정리 실패 로그
+            // ========================================
+
+            for (const result of cleanupResults) {
+              if (result.status === "rejected") {
+                console.error("사진 업로드 실패 복구 오류:", result.reason);
+              }
+            }
+
+            console.error("사진 저장 오류:", error);
+
+            // ========================================
+            // 최대 사진 개수 초과
+            // ========================================
+
+            if (error.code === "PHOTO_LIMIT_EXCEEDED") {
+              return res.status(400).json({
+                success: false,
+
+                message: error.message,
+              });
+            }
+
+            // ========================================
+            // 일반 저장 오류
+            // ========================================
+
+            return res.status(500).json({
+              success: false,
+
+              message: "사진을 저장하지 못했습니다.",
+            });
+          }
+
+          // ========================================
+          // 11. 단일 사진 응답
+          // ========================================
+
+          if (isSingle) {
+            return res.status(201).json({
+              success: true,
+
+              message: "사진이 저장되었습니다.",
+            });
+          }
+
+          // ========================================
+          // 12. 여러 장 사진 응답
+          // ========================================
+
+          return res.status(201).json({
+            success: true,
+
+            message: `${savedPhotoIds.length}장의 사진이 저장되었습니다.`,
+
+            diaryId,
+
+            uploadedCount: savedPhotoIds.length,
+
+            photoIds: savedPhotoIds,
+          });
+        } catch (error) {
+          console.error("사진 업로드 처리 오류:", error);
+
+          return res.status(500).json({
             success: false,
-            message: error.message,
+
+            message: "사진 업로드 처리 중 오류가 발생했습니다.",
           });
         }
-
-        return res.status(500).json({
-          success: false,
-          message: "사진을 저장하지 못했습니다.",
-        });
-      }
-    });
-  });
+      });
+    };
+  }
 
   // ========================================
-  // 9. 기존 단일 사진 업로드 API
+  // 13. 사진 여러 장 업로드
+  // ========================================
+
+  router.post("/:farmId/diaries/:diaryId/photos", createUploadHandler(false));
+
+  // ========================================
+  // 14. 기존 단일 사진 업로드
   // 호환성 유지
   // ========================================
 
-  router.post("/:farmId/diaries/:diaryId/photo", (req, res) => {
-    photoUpload.single("photo")(req, res, (uploadError) => {
-      if (uploadError) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "사진 업로드에 실패했습니다. 파일 크기와 형식을 확인해주세요.",
-        });
-      }
-
-      try {
-        const farmId = Number(req.params.farmId);
-
-        const diaryId = Number(req.params.diaryId);
-
-        if (!isValidId(farmId) || !isValidId(diaryId)) {
-          return res.status(400).json({
-            success: false,
-            message: "올바른 농장 또는 일지 ID가 아닙니다.",
-          });
-        }
-
-        if (!req.file) {
-          return res.status(400).json({
-            success: false,
-            message: "사진을 선택해주세요.",
-          });
-        }
-
-        if (!isValidImage(req.file)) {
-          return res.status(400).json({
-            success: false,
-            message: "JPG, PNG, WebP 사진만 등록할 수 있습니다.",
-          });
-        }
-
-        if (!photoRepository.diaryExists(diaryId, farmId)) {
-          return res.status(404).json({
-            success: false,
-            message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
-          });
-        }
-
-        photoRepository.saveSingle(diaryId, req.file);
-
-        return res.status(201).json({
-          success: true,
-          message: "사진이 저장되었습니다.",
-        });
-      } catch (error) {
-        console.error("단일 사진 저장 오류:", error);
-
-        // ========================================
-        // 최대 10장 제한 오류 처리
-        // ========================================
-
-        if (error.code === "PHOTO_LIMIT_EXCEEDED") {
-          return res.status(400).json({
-            success: false,
-            message: error.message,
-          });
-        }
-
-        // ========================================
-        // 일반 서버 오류
-        // ========================================
-
-        return res.status(500).json({
-          success: false,
-          message: "사진을 저장하지 못했습니다.",
-        });
-      }
-    });
-  });
+  router.post("/:farmId/diaries/:diaryId/photo", createUploadHandler(true));
 
   // ========================================
-  // 10. 사진 여러 장 목록 조회
+  // 15. 사진 목록 조회
   // ========================================
 
   router.get("/:farmId/diaries/:diaryId/photos", (req, res) => {
@@ -313,6 +404,7 @@ function createDiaryPhotoRouter(db) {
       if (!isValidId(farmId) || !isValidId(diaryId)) {
         return res.status(400).json({
           success: false,
+
           message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
         });
       }
@@ -320,6 +412,7 @@ function createDiaryPhotoRouter(db) {
       if (!photoRepository.diaryExists(diaryId, farmId)) {
         return res.status(404).json({
           success: false,
+
           message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
         });
       }
@@ -328,8 +421,11 @@ function createDiaryPhotoRouter(db) {
 
       return res.json({
         success: true,
+
         diaryId,
+
         count: photos.length,
+
         photos,
       });
     } catch (error) {
@@ -337,16 +433,17 @@ function createDiaryPhotoRouter(db) {
 
       return res.status(500).json({
         success: false,
+
         message: "사진 목록을 불러오지 못했습니다.",
       });
     }
   });
 
   // ========================================
-  // 11. 사진 개별 조회
+  // 16. 사진 개별 조회
   // ========================================
 
-  router.get("/:farmId/diaries/:diaryId/photos/:photoId", (req, res) => {
+  router.get("/:farmId/diaries/:diaryId/photos/:photoId", async (req, res) => {
     try {
       const farmId = Number(req.params.farmId);
 
@@ -357,6 +454,7 @@ function createDiaryPhotoRouter(db) {
       if (!isValidId(farmId) || !isValidId(diaryId) || !isValidId(photoId)) {
         return res.status(400).json({
           success: false,
+
           message: "올바른 농장, 재배 일지 또는 사진 ID가 아닙니다.",
         });
       }
@@ -366,26 +464,29 @@ function createDiaryPhotoRouter(db) {
       if (!photo) {
         return res.status(404).json({
           success: false,
+
           message: "해당 사진을 찾을 수 없습니다.",
         });
       }
 
-      return sendImage(res, photo);
+      return await sendImage(res, photo);
     } catch (error) {
       console.error("사진 개별 조회 오류:", error);
 
       return res.status(500).json({
         success: false,
+
         message: "사진을 불러오지 못했습니다.",
       });
     }
   });
 
   // ========================================
-  // 12. 기존 단일 사진 조회
+  // 17. 기존 단일 사진 조회
+  // 가장 최근 사진 반환
   // ========================================
 
-  router.get("/:farmId/diaries/:diaryId/photo", (req, res) => {
+  router.get("/:farmId/diaries/:diaryId/photo", async (req, res) => {
     try {
       const farmId = Number(req.params.farmId);
 
@@ -394,6 +495,7 @@ function createDiaryPhotoRouter(db) {
       if (!isValidId(farmId) || !isValidId(diaryId)) {
         return res.status(400).json({
           success: false,
+
           message: "올바른 농장 또는 일지 ID가 아닙니다.",
         });
       }
@@ -403,23 +505,25 @@ function createDiaryPhotoRouter(db) {
       if (!photo) {
         return res.status(404).json({
           success: false,
+
           message: "등록된 사진이 없습니다.",
         });
       }
 
-      return sendImage(res, photo);
+      return await sendImage(res, photo);
     } catch (error) {
       console.error("사진 조회 오류:", error);
 
       return res.status(500).json({
         success: false,
+
         message: "사진을 불러오지 못했습니다.",
       });
     }
   });
 
   // ========================================
-  // 13. 사진 개별 삭제
+  // 18. 사진 개별 논리 삭제
   // ========================================
 
   router.delete("/:farmId/diaries/:diaryId/photos/:photoId", (req, res) => {
@@ -433,6 +537,7 @@ function createDiaryPhotoRouter(db) {
       if (!isValidId(farmId) || !isValidId(diaryId) || !isValidId(photoId)) {
         return res.status(400).json({
           success: false,
+
           message: "올바른 농장, 재배 일지 또는 사진 ID가 아닙니다.",
         });
       }
@@ -442,24 +547,33 @@ function createDiaryPhotoRouter(db) {
       if (!photo) {
         return res.status(404).json({
           success: false,
+
           message: "삭제할 사진을 찾을 수 없습니다.",
         });
       }
+
+      // ========================================
+      // DB 논리 삭제
+      // 실제 파일은 유지
+      // ========================================
 
       const deleted = photoRepository.remove(photoId, diaryId);
 
       if (!deleted) {
         return res.status(404).json({
           success: false,
+
           message: "삭제할 사진이 없습니다.",
         });
       }
 
-      console.log("🗑 사진 개별 삭제 완료:", photoId);
+      console.log("🗑 사진 논리 삭제 완료:", photoId);
 
       return res.json({
         success: true,
+
         message: "사진이 삭제되었습니다.",
+
         deletedPhotoId: photoId,
       });
     } catch (error) {
@@ -467,13 +581,15 @@ function createDiaryPhotoRouter(db) {
 
       return res.status(500).json({
         success: false,
+
         message: "사진을 삭제하지 못했습니다.",
       });
     }
   });
 
   // ========================================
-  // 14. 기존 사진 전체 삭제 API
+  // 19. 기존 사진 전체 삭제 API
+  // 논리 삭제 방식
   // ========================================
 
   router.delete("/:farmId/diaries/:diaryId/photo", (req, res) => {
@@ -485,6 +601,7 @@ function createDiaryPhotoRouter(db) {
       if (!isValidId(farmId) || !isValidId(diaryId)) {
         return res.status(400).json({
           success: false,
+
           message: "올바른 농장 또는 일지 ID가 아닙니다.",
         });
       }
@@ -492,23 +609,30 @@ function createDiaryPhotoRouter(db) {
       if (!photoRepository.diaryExists(diaryId, farmId)) {
         return res.status(404).json({
           success: false,
+
           message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
         });
       }
+
+      // ========================================
+      // 사진 전체 논리 삭제
+      // ========================================
 
       const deleted = photoRepository.removeAll(diaryId);
 
       if (!deleted) {
         return res.status(404).json({
           success: false,
+
           message: "삭제할 사진이 없습니다.",
         });
       }
 
-      console.log("🗑 사진 전체 삭제 완료:", diaryId);
+      console.log("🗑 사진 전체 논리 삭제 완료:", diaryId);
 
       return res.json({
         success: true,
+
         message: "사진이 삭제되었습니다.",
       });
     } catch (error) {
@@ -516,20 +640,21 @@ function createDiaryPhotoRouter(db) {
 
       return res.status(500).json({
         success: false,
+
         message: "사진을 삭제하지 못했습니다.",
       });
     }
   });
 
   // ========================================
-  // 15. 라우터 반환
+  // 20. 라우터 반환
   // ========================================
 
   return router;
 }
 
 // ========================================
-// 16. 모듈 내보내기
+// 21. 모듈 내보내기
 // ========================================
 
 module.exports = createDiaryPhotoRouter;

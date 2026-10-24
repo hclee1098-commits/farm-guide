@@ -38,4 +38,4 @@ Thumbs.db
 backup/
 
 # 사진 저장소
-/storage/photos/
+storage/photos/
