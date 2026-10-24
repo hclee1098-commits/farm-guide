@@ -752,6 +752,49 @@ body {
 }
 
 /* ========================================
+   🌱 농사 가이드
+   📸 사진 선택 상태 안내
+======================================== */
+
+.diary-photo-selection-status {
+  margin: 12px 0;
+
+  padding: 14px 16px;
+
+  background: #f0fdf4;
+
+  border: 1px solid #bbf7d0;
+
+  border-radius: 12px;
+
+  color: #166534;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  line-height: 1.8;
+
+  white-space: pre-line;
+}
+
+/* 숨김 상태 유지 */
+
+.diary-photo-selection-status[hidden] {
+  display: none;
+}
+
+/* 모바일 화면 */
+
+@media (max-width: 600px) {
+  .diary-photo-selection-status {
+    padding: 12px;
+
+    font-size: 14px;
+  }
+}
+
+/* ========================================
    🗑 선택한 사진 제거 버튼
 ======================================== */
 

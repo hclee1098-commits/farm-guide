@@ -1,4 +1,10 @@
 // ========================================
+// 📸 공통 사진 업로드 컴포넌트
+// ========================================
+
+import { createPhotoUploader } from "./components/photo-uploader.js";
+
+// ========================================
 // 📸 공통 이미지 확대 컴포넌트
 // ========================================
 
@@ -6,10 +12,6 @@ import {
   openImageViewer,
   closeImageViewer,
 } from "./components/image-viewer.js";
-
-// ========================================
-// 🌱 농사 가이드 - 재배 일지 관리
-// ========================================
 
 // ========================================
 // 📸 공통 사진 슬라이더 컴포넌트
@@ -20,6 +22,10 @@ import {
   destroyDiarySlider,
   cleanupDiarySliders,
 } from "./components/photo-slider.js";
+
+// ========================================
+// 🌱 농사 가이드 - 재배 일지 관리
+// ========================================
 
 // ========================================
 // 1. 전역 상태 관리
@@ -41,11 +47,10 @@ let currentFarmGetter = null;
 let formControls = null;
 
 // ========================================
-// 📸 새로 선택한 사진 관리
+// 📸 공통 사진 업로드 컴포넌트
 // ========================================
 
-let selectedDiaryPhotos = [];
-let photoPreviewUrls = [];
+let diaryPhotoUploader = null;
 
 // ========================================
 // 📸 기존 사진 관리
@@ -174,147 +179,6 @@ function enableDiaryImageViewer(image, container) {
 
       openViewer();
     }
-  });
-}
-
-// ========================================
-// 📸 새 사진 미리보기 초기화
-// ========================================
-
-function resetDiaryPhotoPreview() {
-  closeImageViewer();
-
-  const preview = document.getElementById("diaryPhotoPreview");
-
-  const photoInput = document.getElementById("diaryPhoto");
-
-  photoPreviewUrls.forEach((url) => {
-    URL.revokeObjectURL(url);
-  });
-
-  photoPreviewUrls = [];
-  selectedDiaryPhotos = [];
-
-  if (photoInput) {
-    photoInput.value = "";
-  }
-
-  if (preview) {
-    preview.replaceChildren();
-    preview.hidden = true;
-
-    const slider = preview.closest(".diary-slider");
-
-    if (slider) {
-      slider.hidden = true;
-    }
-  }
-}
-
-// ========================================
-// 📸 새 사진 여러 장 미리보기
-// ========================================
-
-function renderDiaryPhotoPreviews() {
-  const preview = document.getElementById("diaryPhotoPreview");
-
-  if (!preview) {
-    return;
-  }
-
-  const slider = preview.closest(".diary-slider");
-
-  // ========================================
-  // 기존 확대 화면 닫기
-  // 임시 이미지 URL 해제 전 실행
-  // ========================================
-
-  closeImageViewer();
-
-  // 기존 임시 URL 정리
-  photoPreviewUrls.forEach((url) => {
-    URL.revokeObjectURL(url);
-  });
-
-  photoPreviewUrls = [];
-
-  preview.replaceChildren();
-
-  // ========================================
-  // 선택한 사진이 없는 경우
-  // ========================================
-
-  if (selectedDiaryPhotos.length === 0) {
-    preview.hidden = true;
-
-    if (slider) {
-      slider.hidden = true;
-    }
-
-    return;
-  }
-
-  preview.hidden = false;
-
-  if (slider) {
-    slider.hidden = false;
-  }
-
-  // ========================================
-  // 사진 카드 생성
-  // ========================================
-
-  selectedDiaryPhotos.forEach((file, index) => {
-    const item = document.createElement("div");
-
-    item.className = "diary-photo-preview-item";
-
-    // 사진 이미지
-    const image = document.createElement("img");
-
-    image.className = "diary-photo-preview-image";
-
-    const imageUrl = URL.createObjectURL(file);
-
-    photoPreviewUrls.push(imageUrl);
-
-    image.src = imageUrl;
-    image.alt = file.name;
-    image.draggable = false;
-
-    enableDiaryImageViewer(image, preview);
-
-    // ========================================
-    // 선택 취소 버튼
-    // ========================================
-
-    const removeBtn = document.createElement("button");
-
-    removeBtn.type = "button";
-    removeBtn.className = "diary-photo-remove-btn";
-    removeBtn.textContent = "✕";
-
-    removeBtn.setAttribute("aria-label", `${file.name} 선택 취소`);
-
-    removeBtn.addEventListener("click", () => {
-      if (formControls?.saveBtn.disabled || photoMutationInProgress) {
-        return;
-      }
-
-      selectedDiaryPhotos.splice(index, 1);
-
-      renderDiaryPhotoPreviews();
-    });
-
-    // 파일 이름
-    const fileName = document.createElement("span");
-
-    fileName.className = "diary-photo-file-name";
-    fileName.textContent = file.name;
-
-    item.append(image, removeBtn, fileName);
-
-    preview.appendChild(item);
   });
 }
 
@@ -638,7 +502,7 @@ function closeDiaryForm() {
   // 입력값 초기화
   form.reset();
 
-  resetDiaryPhotoPreview();
+  diaryPhotoUploader?.reset();
 
   form.hidden = true;
 
@@ -1160,103 +1024,81 @@ export function initFarmDiary(getFarmId) {
   photoPreview.hidden = true;
 
   // ========================================
-  // 📸 사진 여러 장 선택
+  // 📸 공통 사진 업로드 컴포넌트 연결
   // ========================================
 
-  photoInput.addEventListener("change", () => {
-    if (saveBtn.disabled || photoMutationInProgress) {
-      photoInput.value = "";
-      return;
-    }
-
-    // 기존 사진 조회 실패 시 추가 금지
-    if (editingDiaryId !== null && !existingPhotosLoaded) {
-      photoInput.value = "";
-
-      alert("기존 사진 목록을 확인한 후 추가해주세요.");
-
-      return;
-    }
-
-    const files = Array.from(photoInput.files || []);
-
-    photoInput.value = "";
-
-    if (files.length === 0) {
-      return;
-    }
-
+  diaryPhotoUploader = createPhotoUploader({
     // ========================================
-    // 파일 형식 및 크기 검사
+    // 사진 입력 요소
     // ========================================
 
-    for (const file of files) {
-      if (!ALLOWED_DIARY_PHOTO_TYPES.includes(file.type)) {
-        alert("JPG, PNG, WebP 사진만 등록할 수 있습니다.");
+    input: photoInput,
 
-        return;
+    // ========================================
+    // 사진 미리보기 요소
+    // ========================================
+
+    preview: photoPreview,
+
+    // ========================================
+    // 최대 사진 개수
+    // ========================================
+
+    maxPhotos: MAX_DIARY_PHOTOS,
+
+    // ========================================
+    // 사진 최대 크기
+    // ========================================
+
+    maxFileSize: MAX_DIARY_PHOTO_SIZE,
+
+    // ========================================
+    // 허용하는 사진 형식
+    // ========================================
+
+    allowedTypes: ALLOWED_DIARY_PHOTO_TYPES,
+
+    // ========================================
+    // 기존 사진 개수
+    // ========================================
+
+    getExistingCount: () => {
+      if (editingDiaryId === null) {
+        return 0;
       }
 
-      if (file.size > MAX_DIARY_PHOTO_SIZE) {
-        alert(`${file.name}\n` + "사진 크기는 최대 3MB까지 가능합니다.");
+      return existingDiaryPhotoCount;
+    },
 
-        return;
+    // ========================================
+    // 사진 선택 가능 여부
+    // ========================================
+
+    canSelect: () => {
+      if (saveBtn.disabled) {
+        return false;
       }
-    }
 
-    // ========================================
-    // 중복 사진 제외
-    // ========================================
-
-    const newFiles = [];
-
-    const isSameFile = (a, b) => {
-      return (
-        a.name === b.name &&
-        a.size === b.size &&
-        a.lastModified === b.lastModified
-      );
-    };
-
-    for (const file of files) {
-      const alreadySelected = selectedDiaryPhotos.some((selected) =>
-        isSameFile(selected, file),
-      );
-
-      const alreadyAdded = newFiles.some((selected) =>
-        isSameFile(selected, file),
-      );
-
-      if (!alreadySelected && !alreadyAdded) {
-        newFiles.push(file);
+      if (photoMutationInProgress) {
+        return false;
       }
-    }
+
+      if (editingDiaryId !== null && !existingPhotosLoaded) {
+        return false;
+      }
+
+      return true;
+    },
 
     // ========================================
-    // 기존 사진 + 새 사진 최대 10장
+    // 사진 선택 차단 안내
     // ========================================
 
-    const existingCount = editingDiaryId !== null ? existingDiaryPhotoCount : 0;
-
-    const newCount = selectedDiaryPhotos.length + newFiles.length;
-
-    const totalCount = existingCount + newCount;
-
-    if (totalCount > MAX_DIARY_PHOTOS) {
-      alert(
-        `현재 등록된 사진: ${existingCount}장\n` +
-          `새로 선택한 사진: ${newCount}장\n\n` +
-          `재배 일지에는 최대 ${MAX_DIARY_PHOTOS}장까지 등록할 수 있습니다.`,
-      );
-
-      return;
-    }
-
-    selectedDiaryPhotos.push(...newFiles);
-
-    renderDiaryPhotoPreviews();
-
-    console.log("📸 새로 선택한 사진:", selectedDiaryPhotos.length);
+    onBlocked: () => {
+      if (editingDiaryId !== null && !existingPhotosLoaded) {
+        alert("기존 사진 목록을 확인한 후 추가해주세요.");
+      }
+    },
   });
 
   // ========================================
@@ -1277,7 +1119,7 @@ export function initFarmDiary(getFarmId) {
 
     form.reset();
 
-    resetDiaryPhotoPreview();
+    diaryPhotoUploader?.reset();
 
     form.hidden = false;
 
@@ -1357,7 +1199,11 @@ export function initFarmDiary(getFarmId) {
     // 저장할 사진 목록 복사
     // ========================================
 
-    const photoFiles = [...selectedDiaryPhotos];
+    // ========================================
+    // 📸 공통 컴포넌트에서 사진 가져오기
+    // ========================================
+
+    const photoFiles = diaryPhotoUploader.getFiles();
 
     const existingCount = diaryId !== null ? existingDiaryPhotoCount : 0;
 
