@@ -1,0 +1,171 @@
+/* ========================================
+   🌱 농사 가이드
+   📸 공통 사진 업로드 상태
+======================================== */
+
+/* ========================================
+   1. 전체 영역
+======================================== */
+
+.fg-photo-upload-status {
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  margin: 16px 0;
+
+  padding: 18px;
+
+  border: 2px solid #d1d5db;
+  border-radius: 14px;
+
+  background: #f9fafb;
+
+  box-sizing: border-box;
+}
+
+/* ========================================
+   2. 제목
+======================================== */
+
+.fg-photo-upload-status__title {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color: #14532d;
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ========================================
+   3. 기본 문구
+======================================== */
+
+.fg-photo-upload-status p {
+  margin: 0;
+
+  font-size: 16px;
+
+  line-height: 1.6;
+
+  word-break: keep-all;
+}
+
+/* ========================================
+   4. 저장된 사진
+======================================== */
+
+.fg-photo-upload-status__saved {
+  color: #166534;
+
+  font-weight: 600;
+}
+
+/* ========================================
+   5. 새로 선택한 사진
+======================================== */
+
+.fg-photo-upload-status__pending {
+  color: #92400e;
+
+  font-weight: 600;
+}
+
+/* ========================================
+   6. 전체 사진 개수
+======================================== */
+
+.fg-photo-upload-status__total {
+  padding-top: 10px;
+
+  border-top: 1px solid #d1d5db;
+
+  color: #111827;
+
+  font-weight: 700;
+}
+
+/* ========================================
+   7. 안내 메시지
+======================================== */
+
+.fg-photo-upload-status__message {
+  padding: 12px;
+
+  border-radius: 8px;
+
+  background: #e5e7eb;
+
+  color: #374151;
+}
+
+/* ========================================
+   8. 저장 대기 상태
+======================================== */
+
+.fg-photo-upload-status[data-state="pending"] {
+  border-color: #f59e0b;
+
+  background: #fffbeb;
+}
+
+.fg-photo-upload-status[data-state="pending"] .fg-photo-upload-status__message {
+  background: #fef3c7;
+
+  color: #92400e;
+}
+
+/* ========================================
+   9. 저장 중 상태
+======================================== */
+
+.fg-photo-upload-status[data-state="saving"] {
+  border-color: #3b82f6;
+
+  background: #eff6ff;
+}
+
+.fg-photo-upload-status[data-state="saving"] .fg-photo-upload-status__message {
+  background: #dbeafe;
+
+  color: #1e40af;
+}
+
+/* ========================================
+   10. 오류 상태
+======================================== */
+
+.fg-photo-upload-status[data-state="error"] {
+  border-color: #ef4444;
+
+  background: #fef2f2;
+}
+
+.fg-photo-upload-status[data-state="error"] .fg-photo-upload-status__message {
+  background: #fee2e2;
+
+  color: #991b1b;
+}
+
+/* ========================================
+   11. 모바일 최적화
+======================================== */
+
+@media (max-width: 600px) {
+  .fg-photo-upload-status {
+    padding: 16px;
+
+    gap: 12px;
+  }
+
+  .fg-photo-upload-status__title {
+    font-size: 18px;
+  }
+
+  .fg-photo-upload-status p {
+    font-size: 16px;
+  }
+}
