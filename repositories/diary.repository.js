@@ -21,37 +21,32 @@ function createDiaryRepository(db) {
   `);
 
   // ========================================
-  // 3. 농장별 재배 일지 목록 조회
-  // 삭제된 농장과 일지는 제외
+  // 3. 농장별 재배 일지 목록 조회 SQL
+  // 삭제되지 않은 사진의 첨부 여부 포함
   // ========================================
 
   const selectDiaries = db.prepare(`
-    SELECT
-      d.*,
+  SELECT
+    d.*,
 
-      EXISTS (
-        SELECT 1
+    EXISTS (
+      SELECT 1
 
-        FROM diary_photos p
+      FROM diary_photos p
 
-        WHERE p.diary_id = d.id
-          AND p.is_deleted = 0
+      WHERE p.diary_id = d.id
+        AND p.is_deleted = 0
+    ) AS has_photo
 
-      ) AS has_photo
+  FROM farm_diaries d
 
-    FROM farm_diaries d
+  WHERE d.farm_id = ?
+  AND d.is_deleted = 0
 
-    JOIN farms f
-      ON d.farm_id = f.id
-
-    WHERE d.farm_id = ?
-      AND d.is_deleted = 0
-      AND f.is_deleted = 0
-
-    ORDER BY
-      d.work_date DESC,
-      d.id DESC
-  `);
+  ORDER BY
+    d.work_date DESC,
+    d.id DESC
+`);
 
   // ========================================
   // 4. 재배 일지 상세 조회
