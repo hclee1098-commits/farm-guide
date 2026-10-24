@@ -72,12 +72,6 @@ export function showFarmInfo(properties) {
         })}㎡`
       : "-";
 
-  // 농지 고유번호
-  document.getElementById("farmUid").textContent = properties.UID || "-";
-
-  // 필지 번호
-  document.getElementById("farmPnu").textContent = properties.PNU || "-";
-
   // 선택 전 안내 숨기기
   document.getElementById("farmEmptyMessage").style.display = "none";
 

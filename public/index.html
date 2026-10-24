@@ -175,18 +175,6 @@
                   <label>📐 농지 면적</label>
                   <div id="selectedFarmArea">-</div>
                 </div>
-
-                <!-- 농지 고유번호 -->
-                <div class="farm-info-item">
-                  <label>🔢 농지 고유번호</label>
-                  <div id="farmUid">-</div>
-                </div>
-
-                <!-- PNU -->
-                <div class="farm-info-item">
-                  <label>🏷️ 필지 번호(PNU)</label>
-                  <div id="farmPnu">-</div>
-                </div>
               </div>
 
               <!-- 농지 등록 버튼 -->
@@ -263,17 +251,13 @@
               />
             </div>
 
-            <!-- PNU -->
-            <div class="form-group">
-              <label for="farmPnuInput"> 🏷️ 필지 번호(PNU) </label>
+            <!-- ========================================
+     🌱 농지 식별정보 (내부 처리 전용)
+     PNU는 농지 등록에 사용하지만
+     사용자 화면에는 표시하지 않는다.
+======================================== -->
 
-              <input
-                type="text"
-                id="farmPnuInput"
-                placeholder="농지를 선택하면 자동 입력됩니다."
-                readonly
-              />
-            </div>
+            <input type="hidden" id="farmPnuInput" />
 
             <!-- 저장 버튼 -->
             <button type="submit" class="save-btn">🌱 농장 정보 저장</button>
@@ -325,16 +309,6 @@
             <p>
               📍 농지 주소:
               <strong id="detailFarmAddress">-</strong>
-            </p>
-
-            <p>
-              🏷️ PNU:
-              <strong id="detailFarmPnu">-</strong>
-            </p>
-
-            <p>
-              🔢 농지 UID:
-              <strong id="detailFarmUid">-</strong>
             </p>
           </div>
 

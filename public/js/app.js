@@ -446,19 +446,10 @@ async function loadFarms(mapController) {
 
       address.textContent = "📍 농지 주소: " + (farm.address || "미입력");
 
-      // ========================================
-      // PNU 표시
-      // ========================================
-
-      const pnu = document.createElement("p");
-
-      pnu.textContent = "🏷️ PNU: " + (farm.pnu || "미입력");
-
       item.appendChild(title);
       item.appendChild(crop);
       item.appendChild(area);
       item.appendChild(address);
-      item.appendChild(pnu);
 
       // ========================================
       // 📍 등록된 농장 지도에서 보기

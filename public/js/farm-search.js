@@ -125,18 +125,13 @@ export function initFarmSearch(getFarmmapController) {
 
       detail.textContent = `${farm.type || "농지"} · ${areaText}`;
 
-      const pnu = document.createElement("small");
-
-      pnu.textContent = `PNU: ${farm.pnu || "-"}`;
-
-      const uid = document.createElement("small");
-
-      uid.textContent = `UID: ${farm.uid || "-"}`;
+      // ========================================
+      // 🔎 농지 검색 결과 표시
+      // 주소와 농지 종류 및 면적만 표시
+      // ========================================
 
       item.appendChild(address);
       item.appendChild(detail);
-      item.appendChild(pnu);
-      item.appendChild(uid);
 
       // ========================================
       // 검색 결과 클릭

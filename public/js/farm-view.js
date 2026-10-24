@@ -168,15 +168,6 @@ export async function openFarmView(farmId, addHistory = true) {
     document.getElementById("detailFarmAddress").textContent =
       farm.address || "미입력";
 
-    document.getElementById("detailFarmPnu").textContent = farm.pnu || "미입력";
-
-    // ========================================
-    // 농지 UID 표시
-    // ========================================
-
-    document.getElementById("detailFarmUid").textContent =
-      farm.farm_uid || "미입력";
-
     // 농장 정보 로딩 완료
     document.getElementById("detailStatus").textContent = "";
 
