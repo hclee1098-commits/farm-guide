@@ -11,12 +11,6 @@ const express = require("express");
 
 const multer = require("multer");
 
-// ========================================
-// 📸 사진 중복 검사용 해시 생성
-// ========================================
-
-const crypto = require("node:crypto");
-
 const createDiaryPhotoRepository = require("../repositories/diary-photo.repository");
 
 const {
@@ -24,6 +18,14 @@ const {
   getPhoto,
   deletePhotoFile,
 } = require("../services/storage/storage.service");
+
+// ========================================
+// 📸 사진 중복 검사 서비스
+// ========================================
+
+const {
+  filterDuplicatePhotos,
+} = require("../services/diary-photo-duplicate.service");
 
 // ========================================
 // 2. 사진 라우터 생성
@@ -156,97 +158,6 @@ function createDiaryPhotoRouter(db) {
   }
 
   // ========================================
-  // 📸 재배 일지 사진 중복 검사
-  // ========================================
-
-  async function filterDuplicatePhotos(farmId, diaryId, files) {
-    // ========================================
-    // 1. 현재 등록된 사진 조회
-    // ========================================
-
-    const existingPhotos = photoRepository.findAll(diaryId);
-
-    const photoHashes = new Set();
-
-    // ========================================
-    // 2. 기존 사진 해시 생성
-    // ========================================
-
-    for (const photo of existingPhotos) {
-      const savedPhoto = photoRepository.findById(photo.id, diaryId, farmId);
-
-      if (!savedPhoto) {
-        continue;
-      }
-
-      let imageBuffer;
-
-      // ========================================
-      // 기존 BLOB 사진
-      // ========================================
-
-      if (savedPhoto.image_data != null) {
-        imageBuffer = Buffer.from(savedPhoto.image_data);
-      } else {
-        // ========================================
-        // 로컬 파일 저장 사진
-        // ========================================
-
-        imageBuffer = await getPhoto(
-          savedPhoto.storage_key,
-          savedPhoto.storage_provider || "local",
-        );
-      }
-
-      const hash = crypto
-        .createHash("sha256")
-        .update(imageBuffer)
-        .digest("hex");
-
-      photoHashes.add(hash);
-    }
-
-    // ========================================
-    // 3. 새 사진 중복 검사
-    // ========================================
-
-    const uniqueFiles = [];
-
-    let duplicateCount = 0;
-
-    for (const file of files) {
-      const hash = crypto
-        .createHash("sha256")
-        .update(file.buffer)
-        .digest("hex");
-
-      // ========================================
-      // 이미 등록된 사진 또는
-      // 이번 요청에서 중복 선택한 사진
-      // ========================================
-
-      if (photoHashes.has(hash)) {
-        duplicateCount++;
-
-        continue;
-      }
-
-      photoHashes.add(hash);
-
-      uniqueFiles.push(file);
-    }
-
-    // ========================================
-    // 4. 검사 결과 반환
-    // ========================================
-
-    return {
-      uniqueFiles,
-      duplicateCount,
-    };
-  }
-
-  // ========================================
   // 8. 사진 업로드 공통 처리
   // ========================================
 
@@ -333,14 +244,16 @@ function createDiaryPhotoRouter(db) {
           }
 
           // ========================================
-          // 📸 사진 중복 검사
+          // 📸 공통 서비스에서 사진 중복 검사
           // ========================================
 
-          const { uniqueFiles, duplicateCount } = await filterDuplicatePhotos(
+          const { uniqueFiles, duplicateCount } = await filterDuplicatePhotos({
             farmId,
             diaryId,
             files,
-          );
+            photoRepository,
+            getPhoto,
+          });
 
           console.log("📸 사진 중복 검사:", {
             전체선택: files.length,
