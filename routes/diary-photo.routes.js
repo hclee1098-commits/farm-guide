@@ -11,6 +11,12 @@ const express = require("express");
 
 const multer = require("multer");
 
+// ========================================
+// 📸 사진 SHA-256 해시 생성
+// ========================================
+
+const crypto = require("node:crypto");
+
 const createDiaryPhotoRepository = require("../repositories/diary-photo.repository");
 
 const {
@@ -298,10 +304,36 @@ function createDiaryPhotoRouter(db) {
             // 신규 사진만 파일 저장
             // ========================================
 
+            // ========================================
+            // 신규 사진 파일 저장
+            // SHA-256 해시값 함께 생성
+            // ========================================
+
             for (const file of uniqueFiles) {
+              // ========================================
+              // 1. 사진 해시 생성
+              // ========================================
+
+              const contentHash = crypto
+                .createHash("sha256")
+                .update(file.buffer)
+                .digest("hex");
+
+              // ========================================
+              // 2. 실제 사진 파일 저장
+              // ========================================
+
               const storedPhoto = await savePhoto(file, "diary");
 
-              storedPhotos.push(storedPhoto);
+              // ========================================
+              // 3. DB 저장용 정보 구성
+              // ========================================
+
+              storedPhotos.push({
+                ...storedPhoto,
+
+                contentHash,
+              });
             }
 
             // ========================================
@@ -484,14 +516,23 @@ function createDiaryPhotoRouter(db) {
 
       const photos = photoRepository.findAll(diaryId);
 
+      // ========================================
+      // 📸 사진 목록 API 응답
+      //
+      // content_hash는 내부 중복 검사에만 사용
+      // 기존 API 응답 구조 유지
+      // ========================================
+
+      const responsePhotos = photos.map(({ content_hash, ...photo }) => photo);
+
       return res.json({
         success: true,
 
         diaryId,
 
-        count: photos.length,
+        count: responsePhotos.length,
 
-        photos,
+        photos: responsePhotos,
       });
     } catch (error) {
       console.error("사진 목록 조회 오류:", error);

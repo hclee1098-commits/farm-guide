@@ -196,6 +196,8 @@ function initializeDatabase(db) {
 
       file_size INTEGER,
 
+      content_hash TEXT,
+
       is_deleted INTEGER NOT NULL DEFAULT 0
         CHECK (is_deleted IN (0, 1)),
 
@@ -300,6 +302,12 @@ function initializeDatabase(db) {
 
       const oldFileSize = oldColumn("file_size", "LENGTH(image_data)");
 
+      // ========================================
+      // 기존 사진 해시값 보존
+      // ========================================
+
+      const oldContentHash = oldColumn("content_hash", "NULL");
+
       const oldIsDeleted = oldColumn("is_deleted", "0");
 
       const oldDeletedAt = oldColumn("deleted_at", "NULL");
@@ -335,6 +343,8 @@ function initializeDatabase(db) {
 
           file_size INTEGER,
 
+          content_hash TEXT,
+
           is_deleted INTEGER NOT NULL DEFAULT 0
             CHECK (is_deleted IN (0, 1)),
 
@@ -368,6 +378,7 @@ function initializeDatabase(db) {
           storage_provider,
           storage_key,
           file_size,
+          content_hash,
           is_deleted,
           deleted_at,
           created_at
@@ -383,6 +394,7 @@ function initializeDatabase(db) {
           ${oldStorageProvider},
           ${oldStorageKey},
           ${oldFileSize},
+          ${oldContentHash},
           ${oldIsDeleted},
           ${oldDeletedAt},
           ${oldCreatedAt}
@@ -429,6 +441,28 @@ function initializeDatabase(db) {
     }
   } else {
     console.log("📸 사진 테이블 구조 최신 상태!");
+  }
+
+  // ========================================
+  // 📸 사진 내용 해시 컬럼 확인
+  // 기존 데이터베이스 호환
+  // ========================================
+
+  const latestPhotoColumns = db
+    .prepare("PRAGMA table_info(diary_photos)")
+    .all();
+
+  const hasContentHash = latestPhotoColumns.some(
+    (column) => column.name === "content_hash",
+  );
+
+  if (!hasContentHash) {
+    db.exec(`
+      ALTER TABLE diary_photos
+      ADD COLUMN content_hash TEXT
+    `);
+
+    console.log("📸 사진 내용 해시 컬럼 추가 완료!");
   }
 
   // ========================================

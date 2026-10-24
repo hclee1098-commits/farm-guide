@@ -49,10 +49,34 @@ async function filterDuplicatePhotos({
   const photoHashes = new Set();
 
   // ========================================
-  // 5. 기존 사진 해시 생성
+  // 5. 기존 사진 해시 확인
+  //
+  // DB에 해시값이 있으면 바로 사용
+  // 해시값이 없으면 기존 방식으로 계산
   // ========================================
 
   for (const photo of existingPhotos) {
+    // ========================================
+    // 📸 DB에 저장된 SHA-256 해시값 확인
+    // ========================================
+
+    if (
+      typeof photo.content_hash === "string" &&
+      /^[a-f0-9]{64}$/.test(photo.content_hash)
+    ) {
+      photoHashes.add(photo.content_hash);
+
+      // 기존 사진 파일을 다시 읽지 않는다.
+      continue;
+    }
+
+    // ========================================
+    // 기존 사진 호환 처리
+    //
+    // 해시값이 없는 과거 사진은
+    // 기존 방식으로 읽어서 계산한다.
+    // ========================================
+
     const savedPhoto = photoRepository.findById(photo.id, diaryId, farmId);
 
     if (!savedPhoto) {

@@ -4,6 +4,12 @@
 // ========================================
 
 // ========================================
+// 📸 사진 SHA-256 해시 생성
+// ========================================
+
+const crypto = require("node:crypto");
+
+// ========================================
 // 1. Repository 생성
 // ========================================
 
@@ -54,7 +60,8 @@ function createDiaryPhotoRepository(db) {
       p.storage_provider,
       p.storage_key,
       p.file_size,
-      p.created_at
+      p.created_at,
+      p.content_hash
 
     FROM diary_photos p
 
@@ -169,15 +176,16 @@ function createDiaryPhotoRepository(db) {
   // ========================================
 
   const insertLegacyPhoto = db.prepare(`
-    INSERT INTO diary_photos (
-      diary_id,
-      mime_type,
-      image_data,
-      file_size
-    )
+  INSERT INTO diary_photos (
+    diary_id,
+    mime_type,
+    image_data,
+    file_size,
+    content_hash
+  )
 
-    VALUES (?, ?, ?, ?)
-  `);
+  VALUES (?, ?, ?, ?, ?)
+`);
 
   // ========================================
   // 9. 신규 파일 사진 등록 SQL
@@ -186,16 +194,17 @@ function createDiaryPhotoRepository(db) {
   // ========================================
 
   const insertStoredPhoto = db.prepare(`
-    INSERT INTO diary_photos (
-      diary_id,
-      mime_type,
-      storage_provider,
-      storage_key,
-      file_size
-    )
+  INSERT INTO diary_photos (
+    diary_id,
+    mime_type,
+    storage_provider,
+    storage_key,
+    file_size,
+    content_hash
+  )
 
-    VALUES (?, ?, ?, ?, ?)
-  `);
+  VALUES (?, ?, ?, ?, ?, ?)
+`);
 
   // ========================================
   // 10. 사진 개별 소프트 삭제
@@ -377,23 +386,43 @@ function createDiaryPhotoRepository(db) {
   // ========================================
   // 20. 기존 단일 사진 저장
   //
-  // 사진 교체 대신 추가 방식 유지
+  // 기존 BLOB 방식 유지
+  // SHA-256 해시값 함께 저장
   // ========================================
 
   function saveSingle(diaryId, file) {
     return runTransaction(() => {
+      // ========================================
       // 활성 재배 일지 확인
+      // ========================================
+
       ensureActiveDiary(diaryId);
 
+      // ========================================
       // 최대 10장 제한
+      // ========================================
+
       checkPhotoLimit(diaryId, 1);
 
-      // 기존 BLOB 저장
+      // ========================================
+      // 사진 해시 생성
+      // ========================================
+
+      const contentHash = crypto
+        .createHash("sha256")
+        .update(file.buffer)
+        .digest("hex");
+
+      // ========================================
+      // 기존 BLOB 및 해시 저장
+      // ========================================
+
       const result = insertLegacyPhoto.run(
         diaryId,
         file.mimetype,
         file.buffer,
         file.buffer.length,
+        contentHash,
       );
 
       return Number(result.lastInsertRowid);
@@ -402,6 +431,9 @@ function createDiaryPhotoRepository(db) {
 
   // ========================================
   // 21. 기존 사진 여러 장 저장
+  //
+  // 기존 BLOB 방식 유지
+  // 사진별 SHA-256 해시 저장
   // ========================================
 
   function saveMultiple(diaryId, files) {
@@ -410,20 +442,44 @@ function createDiaryPhotoRepository(db) {
     }
 
     return runTransaction(() => {
+      // ========================================
       // 활성 재배 일지 확인
+      // ========================================
+
       ensureActiveDiary(diaryId);
 
+      // ========================================
       // 최대 10장 제한
+      // ========================================
+
       checkPhotoLimit(diaryId, files.length);
 
       const savedPhotoIds = [];
 
+      // ========================================
+      // 사진별 저장
+      // ========================================
+
       for (const file of files) {
+        // ========================================
+        // 사진 해시 생성
+        // ========================================
+
+        const contentHash = crypto
+          .createHash("sha256")
+          .update(file.buffer)
+          .digest("hex");
+
+        // ========================================
+        // BLOB 및 해시 저장
+        // ========================================
+
         const result = insertLegacyPhoto.run(
           diaryId,
           file.mimetype,
           file.buffer,
           file.buffer.length,
+          contentHash,
         );
 
         savedPhotoIds.push(Number(result.lastInsertRowid));
@@ -458,7 +514,9 @@ function createDiaryPhotoRepository(db) {
         !ALLOWED_MIME_TYPES.includes(photo.mimeType) ||
         !Number.isSafeInteger(photo.size) ||
         photo.size <= 0 ||
-        photo.size > MAX_FILE_SIZE
+        photo.size > MAX_FILE_SIZE ||
+        typeof photo.contentHash !== "string" ||
+        !/^[a-f0-9]{64}$/.test(photo.contentHash)
       ) {
         throw new Error("올바르지 않은 사진 저장 정보입니다.");
       }
@@ -488,6 +546,7 @@ function createDiaryPhotoRepository(db) {
           photo.storageProvider,
           photo.storageKey,
           photo.size,
+          photo.contentHash,
         );
 
         savedPhotoIds.push(Number(result.lastInsertRowid));
