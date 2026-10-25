@@ -266,6 +266,81 @@ function createDiaryPhotoRepository(db) {
   `);
 
   // ========================================
+  // 📸 삭제된 사진 조회 SQL
+  // ========================================
+
+  const selectDeletedPhoto = db.prepare(`
+    SELECT
+      p.id
+
+    FROM diary_photos p
+
+    JOIN farm_diaries d
+      ON p.diary_id = d.id
+
+    JOIN farms f
+      ON d.farm_id = f.id
+
+    WHERE p.id = ?
+      AND p.diary_id = ?
+      AND d.farm_id = ?
+      AND p.is_deleted = 1
+      AND d.is_deleted = 0
+      AND f.is_deleted = 0
+  `);
+
+  // ========================================
+  // 📸 사진 소프트 삭제 복구 SQL
+  // ========================================
+
+  const restorePhoto = db.prepare(`
+    UPDATE diary_photos
+
+    SET
+      is_deleted = 0,
+      deleted_at = NULL
+
+    WHERE id = ?
+      AND diary_id = ?
+      AND is_deleted = 1
+
+      AND EXISTS (
+        SELECT 1
+
+        FROM farm_diaries d
+
+        JOIN farms f
+          ON d.farm_id = f.id
+
+        WHERE d.id = diary_photos.diary_id
+          AND d.id = ?
+          AND d.farm_id = ?
+          AND d.is_deleted = 0
+          AND f.is_deleted = 0
+      )
+
+      AND (
+        SELECT COUNT(*)
+
+        FROM diary_photos p
+
+        WHERE p.diary_id = diary_photos.diary_id
+          AND p.is_deleted = 0
+      ) < 10
+
+      AND NOT EXISTS (
+        SELECT 1
+
+        FROM diary_photos active_photo
+
+        WHERE active_photo.diary_id = diary_photos.diary_id
+          AND active_photo.is_deleted = 0
+          AND diary_photos.content_hash IS NOT NULL
+          AND active_photo.content_hash = diary_photos.content_hash
+      )
+  `);
+
+  // ========================================
   // 12. 공통 트랜잭션 처리
   // ========================================
 
@@ -577,6 +652,28 @@ function createDiaryPhotoRepository(db) {
   }
 
   // ========================================
+  // 📸 삭제된 사진 조회
+  // ========================================
+
+  function findDeletedById(photoId, diaryId, farmId) {
+    return selectDeletedPhoto.get(photoId, diaryId, farmId) ?? null;
+  }
+
+  // ========================================
+  // 📸 사진 소프트 삭제 복구
+  // ========================================
+
+  function restore(photoId, diaryId, farmId) {
+    const result = restorePhoto.run(photoId, diaryId, diaryId, farmId);
+
+    if (result.changes > 0) {
+      console.log("📸 사진 복구 완료:", photoId);
+    }
+
+    return result.changes > 0;
+  }
+
+  // ========================================
   // 25. 외부에서 사용할 함수
   // ========================================
 
@@ -600,6 +697,10 @@ function createDiaryPhotoRepository(db) {
     remove,
 
     removeAll,
+
+    findDeletedById,
+
+    restore,
   };
 }
 

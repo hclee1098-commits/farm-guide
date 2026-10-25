@@ -753,6 +753,98 @@ function createDiaryPhotoRouter(db) {
   });
 
   // ========================================
+  // 📸 사진 소프트 삭제 복구 API
+  // PATCH /:farmId/diaries/:diaryId/photos/:photoId/restore
+  // ========================================
+
+  router.patch(
+    "/:farmId/diaries/:diaryId/photos/:photoId/restore",
+    (req, res) => {
+      try {
+        // ========================================
+        // 1. 요청 ID 확인
+        // ========================================
+
+        const farmId = Number(req.params.farmId);
+        const diaryId = Number(req.params.diaryId);
+        const photoId = Number(req.params.photoId);
+
+        const validIds = [farmId, diaryId, photoId].every(
+          (id) => Number.isSafeInteger(id) && id > 0,
+        );
+
+        if (!validIds) {
+          return res.status(400).json({
+            success: false,
+            message: "올바른 ID가 아닙니다.",
+          });
+        }
+
+        // ========================================
+        // 2. 활성 재배 일지 확인
+        // ========================================
+
+        if (!photoRepository.diaryExists(diaryId, farmId)) {
+          return res.status(404).json({
+            success: false,
+            message: "해당 농장의 재배 일지를 찾을 수 없습니다.",
+          });
+        }
+
+        // ========================================
+        // 3. 삭제된 사진 확인
+        // ========================================
+
+        const deletedPhoto = photoRepository.findDeletedById(
+          photoId,
+          diaryId,
+          farmId,
+        );
+
+        if (!deletedPhoto) {
+          return res.status(404).json({
+            success: false,
+            message: "복구할 사진을 찾을 수 없습니다.",
+          });
+        }
+
+        // ========================================
+        // 4. 사진 복구
+        // ========================================
+
+        const restored = photoRepository.restore(photoId, diaryId, farmId);
+
+        if (!restored) {
+          return res.status(409).json({
+            success: false,
+            message:
+              "사진 복구 조건을 충족하지 못했습니다. 사진 개수 또는 중복 여부를 확인하세요.",
+          });
+        }
+
+        // ========================================
+        // 5. 복구 성공
+        // ========================================
+
+        console.log("📸 사진 복구 API 성공:", photoId);
+
+        return res.status(200).json({
+          success: true,
+          message: "사진이 복구되었습니다.",
+          photoId,
+        });
+      } catch (error) {
+        console.error("사진 복구 오류:", error);
+
+        return res.status(500).json({
+          success: false,
+          message: "사진 복구 중 오류가 발생했습니다.",
+        });
+      }
+    },
+  );
+
+  // ========================================
   // 20. 라우터 반환
   // ========================================
 
