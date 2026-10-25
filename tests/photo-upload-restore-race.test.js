@@ -324,13 +324,16 @@ else {
   // 5. Worker 동시 실행
   // ========================================
 
-  function runWorkers(dbPath, deletedPhoto, uploadInfo) {
+  function runWorkers(
+    dbPath,
+    deletedPhoto,
+    uploadInfo,
+    actions = ["upload", "restore"],
+  ) {
     return new Promise((resolve, reject) => {
       const gate = new SharedArrayBuffer(4);
 
       const gateView = new Int32Array(gate);
-
-      const actions = ["upload", "restore"];
 
       const workers = [];
 
@@ -370,6 +373,11 @@ else {
             photoId: deletedPhoto.id,
 
             ...uploadInfo,
+
+            storageKey:
+              action === "upload" && index > 0
+                ? `${uploadInfo.storageKey}.second`
+                : uploadInfo.storageKey,
           },
         });
 
@@ -590,5 +598,91 @@ else {
     console.log("📸 업로드·복구 동시성 검증 완료");
 
     console.log("================================");
+  });
+
+  // ========================================
+  // 테스트 2
+  // 동일 사진 동시 업로드 중복 방지
+  // ========================================
+
+  test("서로 다른 DB 연결에서 동일 사진 동시 업로드 중복 방지", async (t) => {
+    const fixture = createFixture();
+
+    t.after(() => fixture.cleanup());
+
+    const image = createImage("same-concurrent-upload");
+
+    const uploadInfo = {
+      storageKey: "diary/same-upload.png",
+
+      fileSize: image.length,
+
+      contentHash: createHash(image),
+    };
+
+    // ========================================
+    // 두 Worker가 동일한 사진 업로드
+    // ========================================
+
+    const results = await runWorkers(fixture.dbPath, { id: 0 }, uploadInfo, [
+      "upload",
+      "upload",
+    ]);
+
+    console.log("📸 동일 사진 동시 업로드:", results);
+
+    // ========================================
+    // 성공 1개
+    // ========================================
+
+    assert.equal(results.filter((r) => r.success).length, 1);
+
+    // ========================================
+    // 중복 차단 1개
+    // ========================================
+
+    assert.equal(
+      results.filter((r) => r.error?.code === "PHOTO_DUPLICATE").length,
+      1,
+    );
+
+    // ========================================
+    // 활성 사진 1장
+    // ========================================
+
+    assert.equal(fixture.activeCount(), 1);
+
+    // ========================================
+    // 전체 레코드 1개
+    // ========================================
+
+    assert.equal(fixture.totalCount(), 1);
+
+    // ========================================
+    // 성공한 사진의 SHA-256 검증
+    // ========================================
+
+    const successfulIndex = results.findIndex((r) => r.success);
+
+    const successfulStorageKey =
+      successfulIndex === 0
+        ? uploadInfo.storageKey
+        : `${uploadInfo.storageKey}.second`;
+
+    const storedPhoto = fixture.findByStorageKey(successfulStorageKey);
+
+    assert.ok(storedPhoto);
+
+    assert.equal(storedPhoto.content_hash, uploadInfo.contentHash);
+
+    assert.equal(storedPhoto.is_deleted, 0);
+
+    console.log("✅ 동일 사진 동시 업로드 중 하나만 성공");
+
+    console.log("✅ SHA-256 중복 저장 차단");
+
+    console.log("✅ 사진 중복 레코드 생성 없음");
+
+    console.log("✅ 저장된 사진 해시 무결성 유지");
   });
 }

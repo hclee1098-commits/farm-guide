@@ -188,6 +188,22 @@ function createDiaryPhotoRepository(db) {
 `);
 
   // ========================================
+  // 📸 활성 사진 SHA-256 중복 검사 SQL
+  // ========================================
+
+  const selectActivePhotoByHash = db.prepare(`
+    SELECT id
+
+    FROM diary_photos
+
+    WHERE diary_id = ?
+      AND content_hash = ?
+      AND is_deleted = 0
+
+    LIMIT 1
+  `);
+
+  // ========================================
   // 9. 신규 파일 사진 등록 SQL
   //
   // DB에는 사진 저장 위치만 기록
@@ -615,6 +631,30 @@ function createDiaryPhotoRepository(db) {
       // ========================================
 
       for (const photo of storedPhotos) {
+        // ========================================
+        // 활성 사진 SHA-256 중복 검사
+        //
+        // BEGIN IMMEDIATE 트랜잭션 내부에서
+        // 검사하여 동시 업로드 중복을 방지한다.
+        // ========================================
+
+        const existingPhoto = selectActivePhotoByHash.get(
+          diaryId,
+          photo.contentHash,
+        );
+
+        if (existingPhoto) {
+          const error = new Error("이미 등록된 사진입니다.");
+
+          error.code = "PHOTO_DUPLICATE";
+
+          throw error;
+        }
+
+        // ========================================
+        // 신규 사진 메타데이터 저장
+        // ========================================
+
         const result = insertStoredPhoto.run(
           diaryId,
           photo.mimeType,
