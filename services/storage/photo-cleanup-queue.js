@@ -45,6 +45,24 @@ function createPhotoCleanupQueue(db) {
   `);
 
   // ========================================
+  // 📸 고아 사진 정리 작업 중복 등록 방지
+  //
+  // 이미 등록된 작업은 갱신하지 않는다.
+  // 기존 24시간 보호 시간 유지
+  // ========================================
+
+  const insertJobIfAbsent = db.prepare(`
+    INSERT INTO photo_cleanup_jobs (
+      storage_provider,
+      storage_key
+    )
+    VALUES (?, ?)
+
+    ON CONFLICT(storage_provider, storage_key)
+    DO NOTHING
+  `);
+
+  // ========================================
   // 3. 정리 대기 작업 조회
   //
   // 최근 24시간 이내 등록된 작업은 제외한다.
@@ -110,6 +128,19 @@ function createPhotoCleanupQueue(db) {
 
   function enqueue(photo) {
     insertJob.run(photo.storageProvider, photo.storageKey);
+  }
+
+  // ========================================
+  // 📸 기존 작업 시간을 유지하면서 등록
+  // ========================================
+
+  function enqueueIfAbsent(photo) {
+    const result = insertJobIfAbsent.run(
+      photo.storageProvider,
+      photo.storageKey,
+    );
+
+    return result.changes > 0;
   }
 
   // ========================================
@@ -199,6 +230,7 @@ function createPhotoCleanupQueue(db) {
 
   return {
     enqueue,
+    enqueueIfAbsent,
     remove,
     recordFailure,
     isReferenced,
