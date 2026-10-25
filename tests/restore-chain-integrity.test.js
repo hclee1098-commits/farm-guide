@@ -559,6 +559,170 @@ test("농장·일지·사진 3단계 복구 연계 무결성", async (t) => {
   });
 
   // ========================================
+  // 테스트 추가
+  // 잘못된 복구 순서 차단 검증
+  // ========================================
+
+  await t.test("복구 순서 위반 차단 및 데이터 무결성", async () => {
+    // ========================================
+    // 1. 사진 → 일지 → 농장 재삭제
+    // ========================================
+
+    const photoDelete = await request("DELETE", photoPath);
+
+    assert.equal(photoDelete.status, 200);
+
+    const diaryDelete = await request("DELETE", diaryPath);
+
+    assert.equal(diaryDelete.status, 200);
+
+    const farmDelete = await request("DELETE", farmPath);
+
+    assert.equal(farmDelete.status, 200);
+
+    assert.equal(getFarm().is_deleted, 1);
+
+    assert.equal(getDiary().is_deleted, 1);
+
+    assert.equal(getPhoto().is_deleted, 1);
+
+    console.log("✅ 농장·일지·사진 재삭제 성공");
+
+    // ========================================
+    // 2. 농장 삭제 상태에서 사진 복구 시도
+    // ========================================
+
+    const blockedPhoto = await request("PATCH", `${photoPath}/restore`);
+
+    assert.ok([404, 409].includes(blockedPhoto.status));
+
+    assert.equal(getPhoto().is_deleted, 1);
+
+    assert.ok(getPhoto().deleted_at);
+
+    console.log("✅ 삭제된 농장의 사진 복구 차단");
+
+    // ========================================
+    // 3. 농장 삭제 상태에서 일지 복구 시도
+    // ========================================
+
+    const blockedDiary = await request("POST", `${diaryPath}/restore`);
+
+    assert.ok([404, 409].includes(blockedDiary.status));
+
+    assert.equal(getDiary().is_deleted, 1);
+
+    assert.ok(getDiary().deleted_at);
+
+    console.log("✅ 삭제된 농장의 일지 복구 차단");
+
+    // ========================================
+    // 4. 농장 복구
+    // ========================================
+
+    const farmRestore = await request("POST", `${farmPath}/restore`);
+
+    assert.equal(farmRestore.status, 200);
+
+    assert.equal(getFarm().is_deleted, 0);
+
+    assert.equal(getFarm().deleted_at, null);
+
+    assert.equal(getDiary().is_deleted, 1);
+
+    assert.equal(getPhoto().is_deleted, 1);
+
+    console.log("✅ 농장 복구 성공");
+    console.log("✅ 하위 데이터 삭제 상태 유지");
+
+    // ========================================
+    // 5. 일지 삭제 상태에서 사진 복구 시도
+    // ========================================
+
+    const blockedPhotoAgain = await request("PATCH", `${photoPath}/restore`);
+
+    assert.ok([404, 409].includes(blockedPhotoAgain.status));
+
+    assert.equal(getPhoto().is_deleted, 1);
+
+    assert.ok(getPhoto().deleted_at);
+
+    console.log("✅ 삭제된 일지의 사진 복구 차단");
+
+    // ========================================
+    // 6. 재배 일지 복구
+    // ========================================
+
+    const diaryRestore = await request("POST", `${diaryPath}/restore`);
+
+    assert.equal(diaryRestore.status, 200);
+
+    assert.equal(getDiary().is_deleted, 0);
+
+    assert.equal(getDiary().deleted_at, null);
+
+    assert.equal(getPhoto().is_deleted, 1);
+
+    console.log("✅ 재배 일지 정상 복구");
+    console.log("✅ 사진 삭제 상태 유지");
+
+    // ========================================
+    // 7. 사진 복구
+    // ========================================
+
+    const photoRestore = await request("PATCH", `${photoPath}/restore`);
+
+    assert.equal(photoRestore.status, 200);
+
+    const photo = getPhoto();
+
+    assert.equal(photo.is_deleted, 0);
+
+    assert.equal(photo.deleted_at, null);
+
+    console.log("✅ 사진 정상 복구");
+
+    // ========================================
+    // 8. 사진 원본 데이터 무결성 확인
+    // ========================================
+
+    assert.equal(photo.content_hash, originalHash);
+
+    assert.deepEqual(photo.image_data, originalImage);
+
+    console.log("✅ SHA-256 해시 보존");
+    console.log("✅ 원본 이미지 데이터 보존");
+
+    // ========================================
+    // 9. HTTP 사진 조회 확인
+    // ========================================
+
+    const imageResponse = await request("GET", photoPath);
+
+    assert.equal(imageResponse.status, 200);
+
+    const restoredImage = Buffer.from(await imageResponse.arrayBuffer());
+
+    assert.deepEqual(restoredImage, originalImage);
+
+    console.log("✅ 복구 사진 HTTP 조회 성공");
+
+    // ========================================
+    // 10. 전체 복구 상태 확인
+    // ========================================
+
+    assert.equal(getFarm().is_deleted, 0);
+
+    assert.equal(getDiary().is_deleted, 0);
+
+    assert.equal(getPhoto().is_deleted, 0);
+
+    console.log("================================");
+    console.log("🌱 복구 순서 위반 방지 검증 완료");
+    console.log("================================");
+  });
+
+  // ========================================
   // 테스트 6
   // 전체 복구 상태 최종 검증
   // ========================================
