@@ -197,6 +197,21 @@ function createFarmRouter(db) {
       }
 
       // ========================================
+      // 🌱 동일 농지 중복 등록 방지
+      // ========================================
+
+      if (farmUid) {
+        const existingFarm = farmRepository.findActiveByUid(farmUid);
+
+        if (existingFarm) {
+          return res.status(409).json({
+            success: false,
+            message: "이미 등록된 농지입니다.",
+          });
+        }
+      }
+
+      // ========================================
       // 농장 등록
       // ========================================
 
@@ -226,6 +241,17 @@ function createFarmRouter(db) {
         message: "농장 정보가 저장되었습니다.",
       });
     } catch (error) {
+      // ========================================
+      // 🌱 DB UNIQUE 제약조건 위반
+      // ========================================
+
+      if (String(error.message ?? "").includes("idx_farms_active_uid_unique")) {
+        return res.status(409).json({
+          success: false,
+          message: "이미 등록된 농지입니다.",
+        });
+      }
+
       console.error("농장 등록 오류:", error);
 
       return res.status(500).json({

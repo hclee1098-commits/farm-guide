@@ -56,6 +56,22 @@ function createFarmRepository(db) {
   `);
 
   // ========================================
+  // 🌱 활성 농장 UID 중복 확인
+  // 삭제된 농장은 검사 대상에서 제외
+  // ========================================
+
+  const selectActiveFarmByUid = db.prepare(`
+    SELECT id
+
+    FROM farms
+
+    WHERE is_deleted = 0
+      AND TRIM(farm_uid) = ?
+
+    LIMIT 1
+  `);
+
+  // ========================================
   // 5. 농장 등록 SQL
   // ========================================
 
@@ -132,6 +148,20 @@ function createFarmRepository(db) {
   }
 
   // ========================================
+  // 🌱 농지 UID 중복 검사
+  // ========================================
+
+  function findActiveByUid(farmUid) {
+    const uid = String(farmUid ?? "").trim();
+
+    if (!uid) {
+      return null;
+    }
+
+    return selectActiveFarmByUid.get(uid) ?? null;
+  }
+
+  // ========================================
   // 11. 농장 등록
   // ========================================
 
@@ -174,10 +204,15 @@ function createFarmRepository(db) {
   // 14. 외부에서 사용할 함수
   // ========================================
 
+  // ========================================
+  // 14. 외부에서 사용할 함수
+  // ========================================
+
   return {
     findAll,
     findById,
     exists,
+    findActiveByUid,
     create,
     update,
     remove,

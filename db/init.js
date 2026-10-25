@@ -113,6 +113,25 @@ function initializeDatabase(db) {
   console.log("🌱 농장 테이블 구조 확인 완료!");
 
   // ========================================
+  // 🌱 활성 농지 UID 중복 등록 방지
+  // ========================================
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS
+      idx_farms_active_uid_unique
+
+    ON farms (
+      TRIM(farm_uid)
+    )
+
+    WHERE is_deleted = 0
+      AND farm_uid IS NOT NULL
+      AND TRIM(farm_uid) <> ''
+  `);
+
+  console.log("🌱 활성 농지 UID 중복 방지 인덱스 확인 완료!");
+
+  // ========================================
   // 7. 재배 일지 테이블 생성
   // ========================================
 
