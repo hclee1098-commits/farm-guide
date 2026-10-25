@@ -57,18 +57,59 @@ if (!isMainThread) {
       throw new Error("WORKER_START_TIMEOUT");
     }
 
-    const restored = repository.restore(workerData.photoId, 1, 1);
+    // ========================================
+    // 📸 사진 업로드 Worker
+    // ========================================
 
-    parentPort.postMessage({
-      type: "result",
-      photoId: workerData.photoId,
-      restored,
-    });
+    if (workerData.action === "upload") {
+      const savedPhotoIds = repository.saveStoredPhotos(1, [
+        {
+          storageProvider: "local",
+
+          storageKey: `diary/test/upload-${workerData.photoId}.png`,
+
+          mimeType: "image/png",
+
+          size: workerData.fileSize,
+
+          contentHash: workerData.contentHash,
+        },
+      ]);
+
+      parentPort.postMessage({
+        type: "result",
+
+        photoId: workerData.photoId,
+
+        uploaded: true,
+
+        savedPhotoIds,
+      });
+    } else {
+      // ========================================
+      // 📸 기존 사진 복구 Worker
+      // ========================================
+
+      const restored = repository.restore(workerData.photoId, 1, 1);
+
+      parentPort.postMessage({
+        type: "result",
+
+        photoId: workerData.photoId,
+
+        restored,
+      });
+    }
   } catch (error) {
     parentPort.postMessage({
       type: "result",
+
       photoId: workerData.photoId,
+
       restored: false,
+
+      uploaded: false,
+
       error: {
         code: error.code ?? null,
         message: error.message,
@@ -284,7 +325,12 @@ if (!isMainThread) {
   // 5. 다중 Worker 동시 실행
   // ========================================
 
-  function runWorkers(dbPath, photoIds, busyTimeout = 5000) {
+  function runWorkers(
+    dbPath,
+    photoIds,
+    busyTimeout = 5000,
+    action = "restore",
+  ) {
     return new Promise((resolve, reject) => {
       const gate = new SharedArrayBuffer(4);
 
@@ -324,9 +370,18 @@ if (!isMainThread) {
 
           workerData: {
             dbPath,
+
             photoId,
+
             busyTimeout,
+
             gate,
+
+            action,
+
+            fileSize: createImage(`upload-photo-${photoId}`).length,
+
+            contentHash: createHash(createImage(`upload-photo-${photoId}`)),
           },
         });
 
@@ -549,5 +604,205 @@ if (!isMainThread) {
     console.log("✅ 잠금 해제 후 복구 성공");
 
     console.log("✅ 최종 데이터 무결성 유지");
+  });
+
+  // ========================================
+  // 테스트 4
+  // 서로 다른 DB 연결에서
+  // 사진 최대 10장 제한 검증
+  // ========================================
+
+  test("서로 다른 DB 연결에서 동시 업로드 시 최대 10장 유지", async (t) => {
+    const fixture = createFixture();
+
+    t.after(() => fixture.cleanup());
+
+    // ========================================
+    // 기존 활성 사진 9장
+    // ========================================
+
+    for (let i = 1; i <= 9; i++) {
+      fixture.addPhoto(`active-upload-${i}`, false);
+    }
+
+    assert.equal(fixture.activeCount(), 9);
+
+    // ========================================
+    // 서로 다른 사진 2장 동시 업로드
+    // ========================================
+
+    const results = await runWorkers(
+      fixture.dbPath,
+      [100, 101],
+      5000,
+      "upload",
+    );
+
+    console.log("📸 서로 다른 사진 동시 업로드:", results);
+
+    // ========================================
+    // 업로드 성공 1개
+    // ========================================
+
+    assert.equal(results.filter((r) => r.uploaded).length, 1);
+
+    // ========================================
+    // 최대 10장 제한 오류 1개
+    // ========================================
+
+    assert.equal(
+      results.filter((r) => r.error?.code === "PHOTO_LIMIT_EXCEEDED").length,
+      1,
+    );
+
+    // ========================================
+    // 활성 사진 최대 10장
+    // ========================================
+
+    assert.equal(fixture.activeCount(), 10);
+
+    // ========================================
+    // 전체 레코드 10개
+    // ========================================
+
+    assert.equal(fixture.totalCount(), 10);
+
+    // ========================================
+    // 성공한 사진 SHA-256 확인
+    // ========================================
+
+    const successfulResult = results.find((r) => r.uploaded);
+
+    const storedPhoto = fixture.db
+      .prepare(
+        `
+          SELECT *
+          FROM diary_photos
+          WHERE id = ?
+        `,
+      )
+      .get(successfulResult.savedPhotoIds[0]);
+
+    assert.ok(storedPhoto);
+
+    assert.equal(
+      storedPhoto.content_hash,
+      createHash(createImage(`upload-photo-${successfulResult.photoId}`)),
+    );
+
+    assert.equal(storedPhoto.is_deleted, 0);
+
+    // ========================================
+    // 실패한 사진 레코드 없음
+    // ========================================
+
+    const failedResult = results.find((r) => !r.uploaded);
+
+    const failedPhoto = fixture.db
+      .prepare(
+        `
+          SELECT id
+          FROM diary_photos
+          WHERE storage_key = ?
+        `,
+      )
+      .get(`diary/test/upload-${failedResult.photoId}.png`);
+
+    assert.equal(failedPhoto, undefined);
+
+    console.log("✅ 사진 1장만 추가 업로드");
+
+    console.log("✅ 최대 10장 제한 유지");
+
+    console.log("✅ 초과 사진 DB 저장 차단");
+
+    console.log("✅ 기존 사진 9장 보존");
+
+    console.log("✅ SHA-256 해시 무결성 유지");
+  });
+
+  // ========================================
+  // 테스트 5
+  // 최대 개수 이내 동시 업로드 허용
+  // ========================================
+
+  test("서로 다른 DB 연결에서 사진 2장 동시 업로드 성공", async (t) => {
+    const fixture = createFixture();
+
+    t.after(() => fixture.cleanup());
+
+    // ========================================
+    // 기존 활성 사진 8장
+    // ========================================
+
+    for (let i = 1; i <= 8; i++) {
+      fixture.addPhoto(`active-upload-${i}`, false);
+    }
+
+    assert.equal(fixture.activeCount(), 8);
+
+    // ========================================
+    // 서로 다른 사진 2장 동시 업로드
+    // ========================================
+
+    const results = await runWorkers(
+      fixture.dbPath,
+      [200, 201],
+      5000,
+      "upload",
+    );
+
+    console.log("📸 사진 2장 동시 업로드:", results);
+
+    // ========================================
+    // 두 요청 모두 성공
+    // ========================================
+
+    assert.equal(results.filter((r) => r.uploaded).length, 2);
+
+    assert.ok(results.every((r) => !r.error));
+
+    // ========================================
+    // 최종 활성 사진 10장
+    // ========================================
+
+    assert.equal(fixture.activeCount(), 10);
+
+    assert.equal(fixture.totalCount(), 10);
+
+    // ========================================
+    // 신규 사진 해시 검증
+    // ========================================
+
+    for (const result of results) {
+      const photo = fixture.db
+        .prepare(
+          `
+            SELECT *
+            FROM diary_photos
+            WHERE id = ?
+          `,
+        )
+        .get(result.savedPhotoIds[0]);
+
+      assert.ok(photo);
+
+      assert.equal(photo.is_deleted, 0);
+
+      assert.equal(
+        photo.content_hash,
+        createHash(createImage(`upload-photo-${result.photoId}`)),
+      );
+    }
+
+    console.log("✅ 사진 2장 동시 업로드 성공");
+
+    console.log("✅ 활성 사진 정확히 10장");
+
+    console.log("✅ 전체 사진 레코드 10개");
+
+    console.log("✅ 두 사진 SHA-256 해시 보존");
+
+    console.log("✅ 기존 사진 8장 보존");
   });
 }
