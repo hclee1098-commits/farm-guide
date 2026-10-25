@@ -21,6 +21,16 @@ export function createMap() {
   const map = new naver.maps.Map("map", {
     center: new naver.maps.LatLng(37.5665, 126.978),
     zoom: 10,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: naver.maps.MapTypeControlStyle.BUTTON,
+      position: naver.maps.Position.TOP_LEFT,
+      mapTypeIds: [
+        naver.maps.MapTypeId.NORMAL,
+        naver.maps.MapTypeId.SATELLITE,
+        naver.maps.MapTypeId.HYBRID,
+      ],
+    },
     zoomControl: true,
     zoomControlOptions: {
       position: naver.maps.Position.TOP_RIGHT,
