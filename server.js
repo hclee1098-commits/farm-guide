@@ -3,6 +3,13 @@
 // ========================================
 
 // 모듈 불러오기
+
+// ========================================
+// 🌱 환경변수 먼저 로딩
+// ========================================
+
+require("dotenv").config();
+
 const express = require("express");
 // const { DatabaseSync } = require("node:sqlite");
 const path = require("path");
@@ -41,12 +48,22 @@ const farmmapRouter = require("./routes/farmmap.routes");
 const createDiaryPhotoRouter = require("./routes/diary-photo.routes");
 
 // ========================================
+// 📸 사진 자동 정리 모듈
+// ========================================
+
+const createPhotoCleanupQueue = require("./services/storage/photo-cleanup-queue");
+
+const createPhotoCleanupRunner = require("./services/storage/photo-cleanup-runner");
+
+const { deletePhotoFile } = require("./services/storage/storage.service");
+
+// ========================================
 // 📸 고아 사진 자동 탐지
 // ========================================
 
 const scanOrphanPhotos = require("./services/storage/photo-orphan-scanner");
 
-require("dotenv").config();
+// require("dotenv").config();
 
 // ========================================
 // 1. 서버 기본 설정
@@ -168,6 +185,20 @@ app.use("/api/farmmap", farmmapRouter);
 initializeDatabase(db);
 
 // ========================================
+// 📸 사진 자동 정리 실행기 생성
+// ========================================
+
+const photoCleanupQueue = createPhotoCleanupQueue(db);
+
+const photoCleanupRunner = createPhotoCleanupRunner({
+  queue: photoCleanupQueue,
+
+  deletePhotoFile,
+
+  intervalMs: 60 * 60 * 1000,
+});
+
+// ========================================
 // 🌱 농장 API 라우터 연결
 // ========================================
 
@@ -243,6 +274,16 @@ const server = app.listen(PORT, () => {
 
       console.error("📸 서버 시작 고아 사진 검사 실패:", error);
     });
+
+  // ========================================
+  // 📸 사진 자동 정리 시작
+  // ========================================
+
+  if (process.env.PHOTO_CLEANUP_ENABLED === "true") {
+    photoCleanupRunner.start();
+  } else {
+    console.log("📸 사진 자동 정리 비활성화 상태");
+  }
 });
 
 // ========================================
@@ -251,4 +292,12 @@ const server = app.listen(PORT, () => {
 
 server.on("error", (error) => {
   console.error("서버 실행 오류:", error.message);
+});
+
+// ========================================
+// 📸 서버 종료 시 정리 타이머 중지
+// ========================================
+
+server.on("close", () => {
+  photoCleanupRunner.stop();
 });
