@@ -480,6 +480,100 @@ function createFarmRouter(db) {
   });
 
   // ========================================
+  // 🌱 농장 소프트 삭제 복구 API
+  //
+  // POST /api/farms/:farmId/restore
+  //
+  // 200 : 복구 성공
+  // 400 : 잘못된 농장 ID
+  // 404 : 복구 대상 없음
+  // 409 : 활성 농장 UID 충돌
+  // 500 : 데이터베이스 오류
+  // ========================================
+
+  router.post("/:farmId/restore", (req, res) => {
+    try {
+      // ========================================
+      // 1. 농장 ID 검증
+      // ========================================
+
+      const rawFarmId = req.params.farmId;
+
+      if (!/^[1-9]\d*$/.test(rawFarmId)) {
+        return res.status(400).json({
+          success: false,
+          message: "올바른 농장 ID가 아닙니다.",
+        });
+      }
+
+      const farmId = Number(rawFarmId);
+
+      if (!Number.isSafeInteger(farmId)) {
+        return res.status(400).json({
+          success: false,
+          message: "올바른 농장 ID가 아닙니다.",
+        });
+      }
+
+      // ========================================
+      // 2. 농장 복구 실행
+      // ========================================
+
+      const result = farmRepository.restore(farmId);
+
+      // ========================================
+      // 3. 복구 대상 없음
+      // ========================================
+
+      if (result.status === "not_found") {
+        return res.status(404).json({
+          success: false,
+          message: "복구할 농장을 찾을 수 없습니다.",
+        });
+      }
+
+      // ========================================
+      // 4. 활성 농장 UID 충돌
+      // ========================================
+
+      if (result.status === "uid_conflict") {
+        return res.status(409).json({
+          success: false,
+          message:
+            "동일한 농지 UID를 사용하는 활성 농장이 있어 복구할 수 없습니다.",
+        });
+      }
+
+      // ========================================
+      // 5. 복구 성공
+      // ========================================
+
+      if (result.status === "restored") {
+        console.log("🌱 농장 복구 API 성공:", farmId);
+
+        return res.status(200).json({
+          success: true,
+          message: "농장이 정상적으로 복구되었습니다.",
+          farmId,
+        });
+      }
+
+      // ========================================
+      // 6. 예상하지 못한 복구 결과
+      // ========================================
+
+      throw new Error("알 수 없는 농장 복구 결과입니다.");
+    } catch (error) {
+      console.error("농장 복구 오류:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "농장 복구 중 오류가 발생했습니다.",
+      });
+    }
+  });
+
+  // ========================================
   // 10. 라우터 반환
   // ========================================
 
