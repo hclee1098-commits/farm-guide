@@ -32,6 +32,74 @@ function createFarmRouter(db) {
   }
 
   // ========================================
+  // 🌱 농장 ID 안전 변환
+  // 양의 정수 형식만 허용
+  // ========================================
+
+  function parseFarmId(value) {
+    // ========================================
+    // 문자열 형식 검증
+    // ========================================
+
+    if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)) {
+      return NaN;
+    }
+
+    // ========================================
+    // 숫자 변환
+    // ========================================
+
+    const farmId = Number(value);
+
+    // ========================================
+    // 안전한 정수 확인
+    // ========================================
+
+    if (!isValidFarmId(farmId)) {
+      return NaN;
+    }
+
+    return farmId;
+  }
+
+  // ========================================
+  // 🌱 선택 입력 숫자 변환
+  // 잘못된 자료형은 NaN으로 처리
+  // ========================================
+
+  function parseOptionalNumber(value) {
+    // ========================================
+    // 입력하지 않은 값
+    // ========================================
+
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    // ========================================
+    // 숫자 또는 문자열만 허용
+    // ========================================
+
+    if (typeof value !== "number" && typeof value !== "string") {
+      return NaN;
+    }
+
+    // ========================================
+    // 공백만 입력한 경우 차단
+    // ========================================
+
+    if (typeof value === "string" && value.trim() === "") {
+      return NaN;
+    }
+
+    // ========================================
+    // 숫자로 변환
+    // ========================================
+
+    return Number(value);
+  }
+
+  // ========================================
   // 5. 농장 목록 조회 API
   // GET /api/farms
   // ========================================
@@ -58,8 +126,7 @@ function createFarmRouter(db) {
 
   router.get("/:id", (req, res) => {
     try {
-      const farmId = Number(req.params.id);
-
+      const farmId = parseFarmId(req.params.id);
       // ========================================
       // 농장 ID 확인
       // ========================================
@@ -139,20 +206,23 @@ function createFarmRouter(db) {
           ? null
           : String(farm_uid).trim() || null;
 
-      const farmArea =
-        area === null || area === undefined || area === ""
-          ? null
-          : Number(area);
+      // ========================================
+      // 🌱 농장 면적 변환
+      // ========================================
 
-      const farmLat =
-        latitude === null || latitude === undefined || latitude === ""
-          ? null
-          : Number(latitude);
+      const farmArea = parseOptionalNumber(area);
 
-      const farmLng =
-        longitude === null || longitude === undefined || longitude === ""
-          ? null
-          : Number(longitude);
+      // ========================================
+      // 📍 위도 변환
+      // ========================================
+
+      const farmLat = parseOptionalNumber(latitude);
+
+      // ========================================
+      // 📍 경도 변환
+      // ========================================
+
+      const farmLng = parseOptionalNumber(longitude);
 
       // ========================================
       // 농장 면적 검증
@@ -268,7 +338,7 @@ function createFarmRouter(db) {
 
   router.put("/:id", (req, res) => {
     try {
-      const farmId = Number(req.params.id);
+      const farmId = parseFarmId(req.params.id);
 
       // ========================================
       // 농장 ID 검증
@@ -306,10 +376,11 @@ function createFarmRouter(db) {
 
       const farmCrop = typeof crop === "string" ? crop.trim() : null;
 
-      const farmArea =
-        area === null || area === undefined || area === ""
-          ? null
-          : Number(area);
+      // ========================================
+      // 🌱 수정할 농장 면적 변환
+      // ========================================
+
+      const farmArea = parseOptionalNumber(area);
 
       // ========================================
       // 면적 검증
@@ -366,7 +437,7 @@ function createFarmRouter(db) {
 
   router.delete("/:id", (req, res) => {
     try {
-      const farmId = Number(req.params.id);
+      const farmId = parseFarmId(req.params.id);
 
       // ========================================
       // 농장 ID 검증
