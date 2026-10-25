@@ -25,6 +25,10 @@ const {
   deletePhotoFile,
 } = require("../services/storage/storage.service");
 
+const {
+  cleanupUploadedPhotos,
+} = require("../services/storage/cleanup-uploaded-photos");
+
 // ========================================
 // 📸 사진 중복 검사 서비스
 // ========================================
@@ -353,30 +357,32 @@ function createDiaryPhotoRouter(db) {
             });
           } catch (error) {
             // ========================================
-            // 10. 저장 실패 복구
-            //
-            // 이번 요청에서 새로 저장한
-            // 파일만 정리한다.
+            // 📸 업로드 실패 파일 정리
             // ========================================
 
-            const cleanupResults = await Promise.allSettled(
-              storedPhotos.map((photo) =>
-                deletePhotoFile(
-                  photo.storageKey,
-
-                  photo.storageProvider,
-                ),
-              ),
+            const cleanupResult = await cleanupUploadedPhotos(
+              storedPhotos,
+              deletePhotoFile,
             );
 
             // ========================================
-            // 파일 정리 실패 로그
+            // 정리 결과 확인
             // ========================================
 
-            for (const result of cleanupResults) {
-              if (result.status === "rejected") {
-                console.error("사진 업로드 실패 복구 오류:", result.reason);
-              }
+            console.log("📸 사진 파일 정리 결과:", {
+              정리완료: cleanupResult.deleted.length,
+              정리실패: cleanupResult.failed.length,
+            });
+
+            // ========================================
+            // 정리 실패 파일 기록
+            // ========================================
+
+            if (cleanupResult.failed.length > 0) {
+              console.error(
+                "📸 재정리가 필요한 사진 파일:",
+                cleanupResult.failed,
+              );
             }
 
             console.error("사진 저장 오류:", error);
