@@ -40,6 +40,12 @@ const farmmapRouter = require("./routes/farmmap.routes");
 
 const createDiaryPhotoRouter = require("./routes/diary-photo.routes");
 
+// ========================================
+// 📸 고아 사진 자동 탐지
+// ========================================
+
+const scanOrphanPhotos = require("./services/storage/photo-orphan-scanner");
+
 require("dotenv").config();
 
 // ========================================
@@ -195,7 +201,53 @@ const server = app.listen(PORT, () => {
 
   console.log("데이터베이스 연결 완료!");
   console.log("==============================");
+
+  // ========================================
+  // 📸 서버 시작 시 고아 사진 자동 탐지
+  //
+  // 1. 실제 저장소 사진 검사
+  // 2. DB에 등록된 사진 보호
+  // 3. 최근 24시간 사진 보호
+  // 4. 고아 사진 정리 작업 등록
+  //
+  // 주의!
+  // 이 단계에서는 실제 파일을 삭제하지 않는다.
+  // ========================================
+
+  console.log("📸 서버 시작 고아 사진 검사 요청");
+
+  scanOrphanPhotos(db)
+    .then((result) => {
+      console.log("==============================");
+      console.log("📸 서버 시작 고아 사진 검사 완료");
+
+      console.log("검사한 사진:", result.scanned);
+
+      console.log("DB 등록 사진:", result.referenced);
+
+      console.log("최근 사진:", result.recent);
+
+      console.log("신규 정리 작업:", result.queued);
+
+      console.log("기존 정리 작업:", result.alreadyQueued);
+
+      console.log("==============================");
+    })
+    .catch((error) => {
+      // ========================================
+      // 고아 사진 검사 실패
+      //
+      // 사진 검사 실패가 서버 전체 장애로
+      // 이어지지 않도록 별도 처리한다.
+      // ========================================
+
+      console.error("📸 서버 시작 고아 사진 검사 실패:", error);
+    });
 });
+
+// ========================================
+// 🌱 서버 실행 오류 처리
+// ========================================
 
 server.on("error", (error) => {
   console.error("서버 실행 오류:", error.message);
