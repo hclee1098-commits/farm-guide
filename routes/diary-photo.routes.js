@@ -11,6 +11,8 @@ const express = require("express");
 
 const multer = require("multer");
 
+const createPhotoCleanupQueue = require("../services/storage/photo-cleanup-queue");
+
 // ========================================
 // 📸 사진 SHA-256 해시 생성
 // ========================================
@@ -43,6 +45,25 @@ const {
 
 function createDiaryPhotoRouter(db) {
   const router = express.Router();
+
+  // ========================================
+  // 📸 사진 정리 작업 관리
+  // ========================================
+
+  const cleanupQueue = createPhotoCleanupQueue(db);
+
+  // ========================================
+  // 서버 시작 시 미완료 정리 작업 재처리
+  // ========================================
+
+  void cleanupQueue
+    .retryPending(deletePhotoFile)
+    .then((result) => {
+      console.log("📸 미완료 사진 정리 결과:", result);
+    })
+    .catch((error) => {
+      console.error("📸 사진 정리 작업 복구 오류:", error);
+    });
 
   // ========================================
   // 3. Repository 연결
@@ -338,6 +359,12 @@ function createDiaryPhotoRouter(db) {
 
                 contentHash,
               });
+
+              // ========================================
+              // 📸 신규 저장 파일 정리 작업 등록
+              // ========================================
+
+              cleanupQueue.enqueue(storedPhotos[storedPhotos.length - 1]);
             }
 
             // ========================================
@@ -349,6 +376,24 @@ function createDiaryPhotoRouter(db) {
                 diaryId,
                 storedPhotos,
               );
+            }
+
+            // ========================================
+            // 📸 DB 등록 완료 파일은 정리 대상 제외
+            // ========================================
+
+            for (const photo of storedPhotos) {
+              try {
+                cleanupQueue.remove(photo);
+              } catch (error) {
+                // DB 저장은 이미 성공했다.
+                // 정리 작업 삭제 실패를 업로드 실패로 처리하지 않는다.
+                console.error(
+                  "📸 완료된 사진 정리 작업 제거 실패:",
+                  photo.storageKey,
+                  error,
+                );
+              }
             }
 
             console.log("📸 사진 저장 결과:", {
@@ -364,6 +409,40 @@ function createDiaryPhotoRouter(db) {
               storedPhotos,
               deletePhotoFile,
             );
+
+            // ========================================
+            // 📸 파일 정리 결과를 영속 작업에 반영
+            // ========================================
+
+            for (const photo of storedPhotos) {
+              const failure = cleanupResult.failed.find(
+                (item) =>
+                  item.storageKey === photo.storageKey &&
+                  item.storageProvider === photo.storageProvider,
+              );
+
+              try {
+                if (failure) {
+                  // ========================================
+                  // 삭제 실패: 재시도 작업 유지
+                  // ========================================
+
+                  cleanupQueue.recordFailure(photo, failure.error);
+                } else {
+                  // ========================================
+                  // 삭제 성공: 정리 작업 제거
+                  // ========================================
+
+                  cleanupQueue.remove(photo);
+                }
+              } catch (queueError) {
+                console.error(
+                  "📸 사진 정리 작업 기록 오류:",
+                  photo.storageKey,
+                  queueError,
+                );
+              }
+            }
 
             // ========================================
             // 정리 결과 확인
