@@ -55,6 +55,20 @@ function createFixture() {
 }
 
 // ========================================
+// 📸 테스트용 정리 작업 시간 변경
+// ========================================
+
+function makeJobsOld(db) {
+  db.prepare(
+    `
+    UPDATE photo_cleanup_jobs
+
+    SET updated_at = datetime('now', '-25 hours')
+  `,
+  ).run();
+}
+
+// ========================================
 // 테스트 1. 재시작 후 작업 복구
 // ========================================
 
@@ -71,6 +85,12 @@ test("서버 재시작 후 미완료 사진 정리", async (t) => {
   const queue1 = createPhotoCleanupQueue(fixture.db);
 
   queue1.enqueue(photo);
+
+  // ========================================
+  // 📸 25시간 경과한 정리 작업으로 설정
+  // ========================================
+
+  makeJobsOld(fixture.db);
 
   // ========================================
   // 서버 재시작 상황 재현
@@ -130,6 +150,12 @@ test("DB에 등록된 사진은 정리하지 않는다", async (t) => {
 
   queue.enqueue(photo);
 
+  // ========================================
+  // 📸 보호 기간이 지난 작업으로 설정
+  // ========================================
+
+  makeJobsOld(fixture.db);
+
   let deleted = false;
 
   const result = await queue.retryPending(async () => {
@@ -161,6 +187,12 @@ test("파일 삭제 실패 시 정리 작업 유지", async (t) => {
 
   queue.enqueue(photo);
 
+  // ========================================
+  // 📸 첫 번째 정리 작업 실행 조건 충족
+  // ========================================
+
+  makeJobsOld(fixture.db);
+
   const first = await queue.retryPending(async () => {
     throw new Error("TEST_DELETE_FAILURE");
   });
@@ -184,6 +216,11 @@ test("파일 삭제 실패 시 정리 작업 유지", async (t) => {
   // 두 번째 시도 성공
   // ========================================
 
+  // 첫 번째 실패로 updated_at이 갱신되므로
+  // 다시 25시간 경과 상태로 설정한다.
+
+  makeJobsOld(fixture.db);
+
   const second = await queue.retryPending(async () => {});
 
   assert.equal(second.cleaned, 1);
@@ -200,4 +237,62 @@ test("파일 삭제 실패 시 정리 작업 유지", async (t) => {
   assert.equal(remaining.count, 0);
 
   console.log("✅ 삭제 실패 작업 재시도 성공");
+});
+
+// ========================================
+// 테스트 4. 신규 업로드 사진 보호
+// ========================================
+
+test("등록 직후 사진 정리 작업은 실행하지 않는다", async (t) => {
+  const fixture = createFixture();
+
+  t.after(() => fixture.cleanup());
+
+  const queue = createPhotoCleanupQueue(fixture.db);
+
+  const photo = {
+    storageProvider: "local",
+    storageKey: "new-upload-photo.png",
+  };
+
+  // ========================================
+  // 신규 사진 정리 작업 등록
+  // ========================================
+
+  queue.enqueue(photo);
+
+  let deleted = false;
+
+  // ========================================
+  // 등록 직후 정리 작업 실행
+  // ========================================
+
+  const result = await queue.retryPending(async () => {
+    deleted = true;
+  });
+
+  // ========================================
+  // 파일 삭제 차단 확인
+  // ========================================
+
+  assert.equal(deleted, false);
+
+  assert.equal(result.cleaned, 0);
+
+  // ========================================
+  // 정리 작업 유지 확인
+  // ========================================
+
+  const pending = fixture.db
+    .prepare(
+      `
+      SELECT COUNT(*) AS count
+      FROM photo_cleanup_jobs
+    `,
+    )
+    .get();
+
+  assert.equal(pending.count, 1);
+
+  console.log("✅ 신규 업로드 사진 보호 성공");
 });

@@ -45,15 +45,26 @@ function createPhotoCleanupQueue(db) {
   `);
 
   // ========================================
-  // 3. 대기 작업 조회
+  // 3. 정리 대기 작업 조회
+  //
+  // 최근 24시간 이내 등록된 작업은 제외한다.
+  //
+  // 목적:
+  // 1. 진행 중인 사진 업로드 보호
+  // 2. DB 저장 중인 사진 보호
+  // 3. 서버 재시작 직후 파일 오삭제 방지
   // ========================================
 
   const selectJobs = db.prepare(`
-    SELECT *
-    FROM photo_cleanup_jobs
-    ORDER BY id ASC
-    LIMIT ?
-  `);
+  SELECT *
+  FROM photo_cleanup_jobs
+
+  WHERE updated_at <= datetime('now', '-24 hours')
+
+  ORDER BY id ASC
+
+  LIMIT ?
+`);
 
   // ========================================
   // 4. 사진 DB 참조 확인
