@@ -85,6 +85,20 @@ if (!isMainThread) {
 
         savedPhotoIds,
       });
+    } else if (workerData.action === "delete") {
+      // ========================================
+      // 📸 사진 소프트 삭제 Worker
+      // ========================================
+
+      const deleted = repository.remove(workerData.photoId, 1);
+
+      parentPort.postMessage({
+        type: "result",
+
+        photoId: workerData.photoId,
+
+        deleted,
+      });
     } else {
       // ========================================
       // 📸 기존 사진 복구 Worker
@@ -377,7 +391,7 @@ if (!isMainThread) {
 
             gate,
 
-            action,
+            action: Array.isArray(action) ? action[index] : action,
 
             fileSize: createImage(`upload-photo-${photoId}`).length,
 
@@ -804,5 +818,280 @@ if (!isMainThread) {
     console.log("✅ 두 사진 SHA-256 해시 보존");
 
     console.log("✅ 기존 사진 8장 보존");
+  });
+
+  // ========================================
+  // 테스트 6
+  // 사진 삭제 + 업로드 동시 실행
+  // 기존 활성 사진 9장
+  // ========================================
+
+  test("서로 다른 DB 연결에서 사진 삭제와 업로드 동시 실행", async (t) => {
+    const fixture = createFixture();
+
+    t.after(() => fixture.cleanup());
+
+    // ========================================
+    // 활성 사진 9장 생성
+    // ========================================
+
+    const photos = [];
+
+    for (let i = 1; i <= 9; i++) {
+      photos.push(fixture.addPhoto(`active-race-${i}`, false));
+    }
+
+    assert.equal(fixture.activeCount(), 9);
+
+    // ========================================
+    // 삭제 대상
+    // ========================================
+
+    const deleteTarget = photos[0];
+
+    // ========================================
+    // 동시 실행
+    // ========================================
+
+    const results = await runWorkers(
+      fixture.dbPath,
+      [deleteTarget.id, 1000],
+      5000,
+      ["delete", "upload"],
+    );
+
+    console.log("📸 사진 삭제·업로드 동시 실행:", results);
+
+    // ========================================
+    // 삭제 성공
+    // ========================================
+
+    const deleteResult = results[0];
+
+    assert.equal(deleteResult.deleted, true);
+
+    assert.equal(deleteResult.error, undefined);
+
+    // ========================================
+    // 업로드 성공
+    // ========================================
+
+    const uploadResult = results[1];
+
+    assert.equal(uploadResult.uploaded, true);
+
+    assert.equal(uploadResult.error, undefined);
+
+    // ========================================
+    // 활성 사진 9장 유지
+    // ========================================
+
+    assert.equal(fixture.activeCount(), 9);
+
+    // ========================================
+    // 전체 사진 레코드 10개
+    // ========================================
+
+    assert.equal(fixture.totalCount(), 10);
+
+    // ========================================
+    // 삭제 사진 원본 보존
+    // ========================================
+
+    const deletedPhoto = fixture.getPhoto(deleteTarget.id);
+
+    assert.equal(deletedPhoto.is_deleted, 1);
+
+    assert.ok(deletedPhoto.deleted_at);
+
+    assert.equal(deletedPhoto.content_hash, deleteTarget.hash);
+
+    assert.deepEqual(deletedPhoto.image_data, deleteTarget.image);
+
+    // ========================================
+    // 새 사진 저장 확인
+    // ========================================
+
+    const uploadedPhoto = fixture.getPhoto(uploadResult.savedPhotoIds[0]);
+
+    assert.ok(uploadedPhoto);
+
+    assert.equal(uploadedPhoto.is_deleted, 0);
+
+    assert.equal(
+      uploadedPhoto.content_hash,
+      createHash(createImage("upload-photo-1000")),
+    );
+
+    // ========================================
+    // 기존 정상 사진 보존
+    // ========================================
+
+    for (const photo of photos.slice(1)) {
+      const stored = fixture.getPhoto(photo.id);
+
+      assert.equal(stored.is_deleted, 0);
+
+      assert.equal(stored.content_hash, photo.hash);
+
+      assert.deepEqual(stored.image_data, photo.image);
+    }
+
+    console.log("✅ 사진 삭제 성공");
+
+    console.log("✅ 신규 사진 업로드 성공");
+
+    console.log("✅ 활성 사진 9장 유지");
+
+    console.log("✅ 삭제 사진 원본 보존");
+
+    console.log("✅ 기존 정상 사진 보존");
+
+    console.log("✅ SHA-256 해시 무결성 유지");
+  });
+
+  // ========================================
+  // 테스트 7
+  // 최대 10장 상태에서
+  // 삭제 + 업로드 동시 실행
+  // ========================================
+
+  test("사진 10장 상태에서 삭제와 업로드 동시 실행 시 무결성 유지", async (t) => {
+    const fixture = createFixture();
+
+    t.after(() => fixture.cleanup());
+
+    // ========================================
+    // 활성 사진 10장 생성
+    // ========================================
+
+    const photos = [];
+
+    for (let i = 1; i <= 10; i++) {
+      photos.push(fixture.addPhoto(`full-race-${i}`, false));
+    }
+
+    assert.equal(fixture.activeCount(), 10);
+
+    const deleteTarget = photos[0];
+
+    // ========================================
+    // 삭제 + 업로드 동시 실행
+    // ========================================
+
+    const results = await runWorkers(
+      fixture.dbPath,
+      [deleteTarget.id, 2000],
+      5000,
+      ["delete", "upload"],
+    );
+
+    console.log("📸 사진 10장 삭제·업로드 경쟁:", results);
+
+    const deleteResult = results[0];
+
+    const uploadResult = results[1];
+
+    // ========================================
+    // 삭제는 반드시 성공
+    // ========================================
+
+    assert.equal(deleteResult.deleted, true);
+
+    assert.equal(deleteResult.error, undefined);
+
+    // ========================================
+    // 업로드는 실행 순서에 따라
+    // 성공하거나 최대 10장 제한으로 실패
+    // ========================================
+
+    if (uploadResult.uploaded) {
+      assert.equal(uploadResult.error, undefined);
+    } else {
+      assert.equal(uploadResult.error?.code, "PHOTO_LIMIT_EXCEEDED");
+    }
+
+    // ========================================
+    // 최종 활성 사진 개수
+    // ========================================
+
+    const expectedCount = uploadResult.uploaded ? 10 : 9;
+
+    assert.equal(fixture.activeCount(), expectedCount);
+
+    assert.ok(fixture.activeCount() <= 10);
+
+    // ========================================
+    // 전체 레코드 개수
+    // ========================================
+
+    assert.equal(fixture.totalCount(), uploadResult.uploaded ? 11 : 10);
+
+    // ========================================
+    // 삭제 사진 원본 보존
+    // ========================================
+
+    const deletedPhoto = fixture.getPhoto(deleteTarget.id);
+
+    assert.equal(deletedPhoto.is_deleted, 1);
+
+    assert.ok(deletedPhoto.deleted_at);
+
+    assert.equal(deletedPhoto.content_hash, deleteTarget.hash);
+
+    assert.deepEqual(deletedPhoto.image_data, deleteTarget.image);
+
+    // ========================================
+    // 기존 정상 사진 9장 보존
+    // ========================================
+
+    for (const photo of photos.slice(1)) {
+      const stored = fixture.getPhoto(photo.id);
+
+      assert.equal(stored.is_deleted, 0);
+
+      assert.equal(stored.content_hash, photo.hash);
+
+      assert.deepEqual(stored.image_data, photo.image);
+    }
+
+    // ========================================
+    // 신규 사진 저장 여부 검증
+    // ========================================
+
+    const newPhoto = fixture.db
+      .prepare(
+        `
+          SELECT *
+          FROM diary_photos
+          WHERE storage_key = ?
+        `,
+      )
+      .get("diary/test/upload-2000.png");
+
+    if (uploadResult.uploaded) {
+      assert.ok(newPhoto);
+
+      assert.equal(newPhoto.is_deleted, 0);
+
+      assert.equal(
+        newPhoto.content_hash,
+        createHash(createImage("upload-photo-2000")),
+      );
+    } else {
+      assert.equal(newPhoto, undefined);
+    }
+
+    console.log("✅ 사진 삭제 성공");
+
+    console.log("✅ 최대 10장 제한 유지");
+
+    console.log("✅ 삭제 사진 원본 보존");
+
+    console.log("✅ 기존 정상 사진 9장 보존");
+
+    console.log("✅ 실패 업로드 레코드 생성 방지");
+
+    console.log("✅ SQLite 동시성 무결성 유지");
   });
 }
