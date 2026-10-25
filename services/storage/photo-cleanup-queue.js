@@ -107,19 +107,35 @@ function createPhotoCleanupQueue(db) {
 
   // ========================================
   // 5. 정리 작업 등록
+  //
+  // pending 상태:
+  // 기존 작업 시간 갱신 허용
+  //
+  // processing 상태:
+  // 다른 DB 연결에서 선점한 작업이므로
+  // 상태 및 선점 시간을 변경하지 않는다.
+  //
+  // 목적:
+  // 1. SQLite 다중 연결 작업 선점 보호
+  // 2. 실행 중인 작업의 시간 정보 보존
+  // 3. 중단된 작업의 복구 가능성 유지
   // ========================================
 
   const insertJob = db.prepare(`
-    INSERT INTO photo_cleanup_jobs (
-      storage_provider,
-      storage_key
-    )
-    VALUES (?, ?)
+  INSERT INTO photo_cleanup_jobs (
+    storage_provider,
+    storage_key
+  )
 
-    ON CONFLICT(storage_provider, storage_key)
-    DO UPDATE SET
-      updated_at = CURRENT_TIMESTAMP
-  `);
+  VALUES (?, ?)
+
+  ON CONFLICT(storage_provider, storage_key)
+
+  DO UPDATE SET
+    updated_at = CURRENT_TIMESTAMP
+
+  WHERE photo_cleanup_jobs.state = 'pending'
+`);
 
   // ========================================
   // 6. 기존 작업 시간 유지 등록
