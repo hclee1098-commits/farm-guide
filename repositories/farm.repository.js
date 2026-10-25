@@ -124,6 +124,59 @@ function createFarmRepository(db) {
   `);
 
   // ========================================
+  // 🌱 삭제된 농장 조회
+  // 복구 대상 확인
+  // ========================================
+
+  const selectDeletedFarmById = db.prepare(`
+    SELECT
+      id,
+      farm_uid
+
+    FROM farms
+
+    WHERE id = ?
+      AND is_deleted = 1
+  `);
+
+  // ========================================
+  // 🌱 농장 소프트 삭제 복구
+  //
+  // 1. 삭제된 농장만 복구
+  // 2. 활성 농장 UID 중복 방지
+  // 3. 기존 농장 데이터 유지
+  // 4. 삭제 시간 초기화
+  // ========================================
+
+  const restoreDeletedFarm = db.prepare(`
+    UPDATE farms
+
+    SET
+      is_deleted = 0,
+      deleted_at = NULL
+
+    WHERE id = ?
+      AND is_deleted = 1
+
+      AND (
+        farm_uid IS NULL
+
+        OR TRIM(farm_uid) = ''
+
+        OR NOT EXISTS (
+          SELECT 1
+
+          FROM farms AS active
+
+          WHERE active.is_deleted = 0
+
+            AND TRIM(active.farm_uid) =
+                TRIM(farms.farm_uid)
+        )
+      )
+  `);
+
+  // ========================================
   // 8. 농장 목록 조회
   // ========================================
 
@@ -201,8 +254,64 @@ function createFarmRepository(db) {
   }
 
   // ========================================
-  // 14. 외부에서 사용할 함수
+  // 🌱 농장 복구
+  //
+  // 복구 결과
+  // restored     : 복구 성공
+  // not_found    : 복구 대상 없음
+  // uid_conflict : 활성 농장 UID 충돌
   // ========================================
+
+  function restore(farmId) {
+    // ========================================
+    // 1. 농장 ID 검증
+    // ========================================
+
+    if (!Number.isSafeInteger(farmId) || farmId <= 0) {
+      return {
+        status: "not_found",
+      };
+    }
+
+    // ========================================
+    // 2. 삭제된 농장 확인
+    // ========================================
+
+    const deletedFarm = selectDeletedFarmById.get(farmId);
+
+    if (!deletedFarm) {
+      return {
+        status: "not_found",
+      };
+    }
+
+    // ========================================
+    // 3. 농장 복구 실행
+    // UID 충돌 여부는 SQL에서 검사
+    // ========================================
+
+    const result = restoreDeletedFarm.run(farmId);
+
+    // ========================================
+    // 4. 복구 성공
+    // ========================================
+
+    if (result.changes > 0) {
+      console.log("🌱 농장 복구 완료:", farmId);
+
+      return {
+        status: "restored",
+      };
+    }
+
+    // ========================================
+    // 5. UID 충돌로 복구 실패
+    // ========================================
+
+    return {
+      status: "uid_conflict",
+    };
+  }
 
   // ========================================
   // 14. 외부에서 사용할 함수
@@ -216,6 +325,7 @@ function createFarmRepository(db) {
     create,
     update,
     remove,
+    restore,
   };
 }
 
