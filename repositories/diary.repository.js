@@ -140,6 +140,50 @@ function createDiaryRepository(db) {
   `);
 
   // ========================================
+  // 📖 삭제된 재배 일지 조회
+  // ========================================
+
+  const selectDeletedDiary = db.prepare(`
+    SELECT
+      id,
+      farm_id
+
+    FROM farm_diaries
+
+    WHERE id = ?
+      AND farm_id = ?
+      AND is_deleted = 1
+  `);
+
+  // ========================================
+  // 📖 재배 일지 복구 SQL
+  //
+  // 삭제된 일지만 복구
+  // 활성 농장에 속한 경우만 허용
+  // ========================================
+
+  const restoreDiary = db.prepare(`
+    UPDATE farm_diaries
+
+    SET
+      is_deleted = 0,
+      deleted_at = NULL
+
+    WHERE id = ?
+      AND farm_id = ?
+      AND is_deleted = 1
+
+      AND EXISTS (
+        SELECT 1
+
+        FROM farms f
+
+        WHERE f.id = farm_diaries.farm_id
+          AND f.is_deleted = 0
+      )
+  `);
+
+  // ========================================
   // 8. 농장 존재 여부 확인
   // ========================================
 
@@ -219,6 +263,69 @@ function createDiaryRepository(db) {
   }
 
   // ========================================
+  // 📖 재배 일지 소프트 삭제 복구
+  //
+  // restored      : 복구 성공
+  // not_found     : 복구 대상 없음
+  // farm_inactive : 농장이 없거나 삭제됨
+  // ========================================
+
+  function restore(farmId, diaryId) {
+    // ========================================
+    // 1. ID 검증
+    // ========================================
+
+    if (
+      !Number.isSafeInteger(farmId) ||
+      farmId <= 0 ||
+      !Number.isSafeInteger(diaryId) ||
+      diaryId <= 0
+    ) {
+      return {
+        status: "not_found",
+      };
+    }
+
+    // ========================================
+    // 2. 삭제된 일지 확인
+    // ========================================
+
+    const deletedDiary = selectDeletedDiary.get(diaryId, farmId);
+
+    if (!deletedDiary) {
+      return {
+        status: "not_found",
+      };
+    }
+
+    // ========================================
+    // 3. 복구 실행
+    // ========================================
+
+    const result = restoreDiary.run(diaryId, farmId);
+
+    // ========================================
+    // 4. 복구 성공
+    // ========================================
+
+    if (result.changes > 0) {
+      console.log("📖 재배 일지 복구 완료:", diaryId);
+
+      return {
+        status: "restored",
+      };
+    }
+
+    // ========================================
+    // 5. 농장이 삭제되었거나 존재하지 않음
+    // ========================================
+
+    return {
+      status: "farm_inactive",
+    };
+  }
+
+  // ========================================
   // 14. 외부에서 사용할 함수
   // ========================================
 
@@ -229,6 +336,7 @@ function createDiaryRepository(db) {
     create,
     update,
     remove,
+    restore,
   };
 }
 

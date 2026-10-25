@@ -406,6 +406,101 @@ function createDiaryRouter(db) {
   });
 
   // ========================================
+  // 📖 재배 일지 복구 API
+  //
+  // POST /api/farms/:farmId/diaries/:diaryId/restore
+  //
+  // 200 : 복구 성공
+  // 400 : 잘못된 ID
+  // 404 : 복구 대상 없음
+  // 409 : 농장이 삭제되었거나 존재하지 않음
+  // 500 : 서버 오류
+  // ========================================
+
+  router.post("/:farmId/diaries/:diaryId/restore", (req, res) => {
+    try {
+      // ========================================
+      // 1. ID 검증
+      // ========================================
+
+      const rawFarmId = req.params.farmId;
+
+      const rawDiaryId = req.params.diaryId;
+
+      if (!/^[1-9]\d*$/.test(rawFarmId) || !/^[1-9]\d*$/.test(rawDiaryId)) {
+        return res.status(400).json({
+          success: false,
+          message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
+        });
+      }
+
+      const farmId = Number(rawFarmId);
+
+      const diaryId = Number(rawDiaryId);
+
+      if (!Number.isSafeInteger(farmId) || !Number.isSafeInteger(diaryId)) {
+        return res.status(400).json({
+          success: false,
+          message: "올바른 농장 또는 재배 일지 ID가 아닙니다.",
+        });
+      }
+
+      // ========================================
+      // 2. 복구 실행
+      // ========================================
+
+      const result = diaryRepository.restore(farmId, diaryId);
+
+      // ========================================
+      // 3. 복구 대상 없음
+      // ========================================
+
+      if (result.status === "not_found") {
+        return res.status(404).json({
+          success: false,
+          message: "복구할 재배 일지를 찾을 수 없습니다.",
+        });
+      }
+
+      // ========================================
+      // 4. 삭제된 농장 복구 차단
+      // ========================================
+
+      if (result.status === "farm_inactive") {
+        return res.status(409).json({
+          success: false,
+          message:
+            "농장이 삭제되었거나 존재하지 않아 재배 일지를 복구할 수 없습니다.",
+        });
+      }
+
+      // ========================================
+      // 5. 복구 성공
+      // ========================================
+
+      if (result.status === "restored") {
+        console.log("📖 재배 일지 복구 API 성공:", diaryId);
+
+        return res.status(200).json({
+          success: true,
+          message: "재배 일지가 복구되었습니다.",
+          farmId,
+          diaryId,
+        });
+      }
+
+      throw new Error("알 수 없는 재배 일지 복구 결과입니다.");
+    } catch (error) {
+      console.error("재배 일지 복구 오류:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "재배 일지 복구 중 오류가 발생했습니다.",
+      });
+    }
+  });
+
+  // ========================================
   // 10. 라우터 반환
   // ========================================
 
