@@ -314,10 +314,304 @@ function createFarmRepository(db) {
   }
 
   // ========================================
+
+  // ========================================
+  // 사용자별 농장 접근 SQL
+  //
+  // 기존 Repository 함수는 유지한다.
+  // 인증된 API에서는 forUser()를 사용한다.
+  // ========================================
+
+  const ownedSelectAll = db.prepare(`
+    SELECT *
+    FROM farms
+    WHERE owner_user_id = ?
+      AND is_deleted = 0
+    ORDER BY id DESC
+  `);
+
+  const ownedSelectById = db.prepare(`
+    SELECT
+      id,
+      name,
+      crop,
+      area,
+      address,
+      pnu,
+      farm_uid
+    FROM farms
+    WHERE id = ?
+      AND owner_user_id = ?
+      AND is_deleted = 0
+  `);
+
+  const ownedExists = db.prepare(`
+    SELECT id
+    FROM farms
+    WHERE id = ?
+      AND owner_user_id = ?
+      AND is_deleted = 0
+  `);
+
+  // ========================================
+  // 사용자 소유 농장 등록
+  // ========================================
+
+  const ownedInsert = db.prepare(`
+    INSERT INTO farms (
+      name,
+      crop,
+      area,
+      latitude,
+      longitude,
+      address,
+      pnu,
+      farm_uid,
+      owner_user_id
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  // ========================================
+  // 사용자 소유 농장 수정
+  // ========================================
+
+  const ownedUpdate = db.prepare(`
+    UPDATE farms
+    SET
+      name = ?,
+      crop = ?,
+      area = ?
+    WHERE id = ?
+      AND owner_user_id = ?
+      AND is_deleted = 0
+  `);
+
+  // ========================================
+  // 사용자 소유 농장 소프트 삭제
+  // ========================================
+
+  const ownedDelete = db.prepare(`
+    UPDATE farms
+    SET
+      is_deleted = 1,
+      deleted_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+      AND owner_user_id = ?
+      AND is_deleted = 0
+  `);
+
+  // ========================================
+  // 사용자 소유 삭제 농장 확인
+  // ========================================
+
+  const ownedDeletedFarm = db.prepare(`
+    SELECT id, farm_uid
+    FROM farms
+    WHERE id = ?
+      AND owner_user_id = ?
+      AND is_deleted = 1
+  `);
+
+  // ========================================
+  // 사용자 소유 농장 복구
+  //
+  // 기존 UID 중복 방지 정책 유지
+  // ========================================
+
+  const ownedRestore = db.prepare(`
+    UPDATE farms
+    SET
+      is_deleted = 0,
+      deleted_at = NULL
+    WHERE id = ?
+      AND owner_user_id = ?
+      AND is_deleted = 1
+
+      AND (
+        farm_uid IS NULL
+
+        OR TRIM(farm_uid) = ''
+
+        OR NOT EXISTS (
+          SELECT 1
+          FROM farms AS active
+          WHERE active.is_deleted = 0
+            AND TRIM(active.farm_uid) =
+                TRIM(farms.farm_uid)
+        )
+      )
+  `);
+
+  // ========================================
+  // 인증 사용자 전용 Repository
+  // ========================================
+
+  function forUser(userId) {
+
+    if (
+      !Number.isSafeInteger(userId) ||
+      userId <= 0
+    ) {
+      throw new TypeError(
+        "유효한 사용자 ID가 필요합니다."
+      );
+    }
+
+    return {
+
+      // ========================================
+      // 본인 농장 목록
+      // ========================================
+
+      findAll() {
+        return ownedSelectAll.all(userId);
+      },
+
+      // ========================================
+      // 본인 농장 상세
+      // ========================================
+
+      findById(farmId) {
+        return ownedSelectById.get(
+          farmId,
+          userId
+        );
+      },
+
+      // ========================================
+      // 본인 농장 존재 여부
+      // ========================================
+
+      exists(farmId) {
+        return Boolean(
+          ownedExists.get(farmId, userId)
+        );
+      },
+
+      // ========================================
+      // 기존 전역 UID 중복 정책 유지
+      //
+      // 다른 사용자의 농장 ID는 반환하지 않음
+      // ========================================
+
+      findActiveByUid(farmUid) {
+
+        const uid = String(
+          farmUid ?? ""
+        ).trim();
+
+        if (!uid) {
+          return false;
+        }
+
+        return Boolean(
+          selectActiveFarmByUid.get(uid)
+        );
+      },
+
+      // ========================================
+      // 본인 소유 농장 생성
+      // ========================================
+
+      create(farm) {
+
+        const result = ownedInsert.run(
+          farm.name,
+          farm.crop,
+          farm.area,
+          farm.latitude,
+          farm.longitude,
+          farm.address,
+          farm.pnu,
+          farm.farm_uid,
+          userId
+        );
+
+        return Number(result.lastInsertRowid);
+      },
+
+      // ========================================
+      // 본인 농장 수정
+      // ========================================
+
+      update(farmId, farm) {
+
+        const result = ownedUpdate.run(
+          farm.name,
+          farm.crop,
+          farm.area,
+          farmId,
+          userId
+        );
+
+        return result.changes > 0;
+      },
+
+      // ========================================
+      // 본인 농장 삭제
+      // ========================================
+
+      remove(farmId) {
+
+        const result = ownedDelete.run(
+          farmId,
+          userId
+        );
+
+        return result.changes > 0;
+      },
+
+      // ========================================
+      // 본인 농장 복구
+      // ========================================
+
+      restore(farmId) {
+
+        if (
+          !Number.isSafeInteger(farmId) ||
+          farmId <= 0
+        ) {
+          return {
+            status: "not_found"
+          };
+        }
+
+        const deletedFarm =
+          ownedDeletedFarm.get(
+            farmId,
+            userId
+          );
+
+        if (!deletedFarm) {
+          return {
+            status: "not_found"
+          };
+        }
+
+        const result = ownedRestore.run(
+          farmId,
+          userId
+        );
+
+        if (result.changes > 0) {
+          return {
+            status: "restored"
+          };
+        }
+
+        return {
+          status: "uid_conflict"
+        };
+      }
+
+    };
+  }
   // 14. 외부에서 사용할 함수
   // ========================================
 
   return {
+    forUser,
     findAll,
     findById,
     exists,
