@@ -28,6 +28,7 @@ const { initializeDatabase } = require("./db/init");
 // ========================================
 
 const createFarmRouter = require("./routes/farm.routes");
+const createAuthRouter = require("./routes/auth.routes");
 
 // ========================================
 // 📖 재배 일지 API
@@ -183,6 +184,8 @@ app.use("/api/farmmap", farmmapRouter);
 // ========================================
 
 initializeDatabase(db);
+
+app.use("/api/auth", createAuthRouter(db));
 
 // ========================================
 // 📸 사진 자동 정리 실행기 생성
