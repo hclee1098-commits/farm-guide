@@ -39,3 +39,6 @@ backup/
 
 # 사진 저장소
 storage/photos/
+# 백업 파일 제외
+*.bak
+*.bak-*
