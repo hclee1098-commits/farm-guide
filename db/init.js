@@ -40,6 +40,59 @@ function initializeDatabase(db) {
   // 3. 기존 농장 테이블 컬럼 확인
   // ========================================
 
+  // ========================================
+  // 사용자 계정 테이블 초기화
+  // ========================================
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      internal_key TEXT NOT NULL UNIQUE,
+
+      display_name TEXT NOT NULL,
+
+      role TEXT NOT NULL DEFAULT 'user'
+        CHECK (role IN ('admin', 'user')),
+
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  console.log("사용자 테이블 확인 완료!");
+
+  // ========================================
+  // 농장 소유권 컬럼 초기화
+  // ========================================
+
+  const ownershipColumns = db
+    .prepare("PRAGMA table_info(farms)")
+    .all();
+
+  const hasOwnerColumn = ownershipColumns.some(
+    (column) => column.name === "owner_user_id"
+  );
+
+  if (!hasOwnerColumn) {
+    db.exec(`
+      ALTER TABLE farms
+      ADD COLUMN owner_user_id INTEGER
+      REFERENCES users(id)
+    `);
+
+    console.log("농장 소유권 컬럼 추가 완료!");
+  }
+
+  // ========================================
+  // 농장 소유권 조회 인덱스
+  // ========================================
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_farms_owner_user_id
+    ON farms(owner_user_id)
+  `);
+
+  console.log("농장 소유권 인덱스 확인 완료!");
   const columns = db.prepare("PRAGMA table_info(farms)").all();
 
   const columnNames = columns.map((column) => column.name);
