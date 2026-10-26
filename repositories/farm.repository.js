@@ -322,7 +322,45 @@ function createFarmRepository(db) {
   // 인증된 API에서는 forUser()를 사용한다.
   // ========================================
 
-  const ownedSelectAll = db.prepare(`
+  // ========================================
+  // 사용자별 SQL 지연 준비
+  //
+  // 기존 Repository 호환성 유지
+  // 최초 실행 시 SQL 준비
+  // 이후 Prepared Statement 재사용
+  // ========================================
+
+  function lazyPrepare(sql) {
+
+    let statement = null;
+
+    function getStatement() {
+
+      if (statement === null) {
+        statement = db.prepare(sql);
+      }
+
+      return statement;
+    }
+
+    return {
+
+      all(...params) {
+        return getStatement().all(...params);
+      },
+
+      get(...params) {
+        return getStatement().get(...params);
+      },
+
+      run(...params) {
+        return getStatement().run(...params);
+      }
+
+    };
+  }
+
+  const ownedSelectAll = lazyPrepare(`
     SELECT *
     FROM farms
     WHERE owner_user_id = ?
@@ -330,7 +368,7 @@ function createFarmRepository(db) {
     ORDER BY id DESC
   `);
 
-  const ownedSelectById = db.prepare(`
+  const ownedSelectById = lazyPrepare(`
     SELECT
       id,
       name,
@@ -345,7 +383,7 @@ function createFarmRepository(db) {
       AND is_deleted = 0
   `);
 
-  const ownedExists = db.prepare(`
+  const ownedExists = lazyPrepare(`
     SELECT id
     FROM farms
     WHERE id = ?
@@ -357,7 +395,7 @@ function createFarmRepository(db) {
   // 사용자 소유 농장 등록
   // ========================================
 
-  const ownedInsert = db.prepare(`
+  const ownedInsert = lazyPrepare(`
     INSERT INTO farms (
       name,
       crop,
@@ -376,7 +414,7 @@ function createFarmRepository(db) {
   // 사용자 소유 농장 수정
   // ========================================
 
-  const ownedUpdate = db.prepare(`
+  const ownedUpdate = lazyPrepare(`
     UPDATE farms
     SET
       name = ?,
@@ -391,7 +429,7 @@ function createFarmRepository(db) {
   // 사용자 소유 농장 소프트 삭제
   // ========================================
 
-  const ownedDelete = db.prepare(`
+  const ownedDelete = lazyPrepare(`
     UPDATE farms
     SET
       is_deleted = 1,
@@ -405,7 +443,7 @@ function createFarmRepository(db) {
   // 사용자 소유 삭제 농장 확인
   // ========================================
 
-  const ownedDeletedFarm = db.prepare(`
+  const ownedDeletedFarm = lazyPrepare(`
     SELECT id, farm_uid
     FROM farms
     WHERE id = ?
@@ -419,7 +457,7 @@ function createFarmRepository(db) {
   // 기존 UID 중복 방지 정책 유지
   // ========================================
 
-  const ownedRestore = db.prepare(`
+  const ownedRestore = lazyPrepare(`
     UPDATE farms
     SET
       is_deleted = 0,
