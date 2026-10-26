@@ -62,6 +62,74 @@ function initializeDatabase(db) {
   console.log("사용자 테이블 확인 완료!");
 
   // ========================================
+  // 사용자 로그인 정보 테이블
+  // ========================================
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_credentials (
+
+      user_id INTEGER PRIMARY KEY,
+
+      username TEXT NOT NULL
+        COLLATE NOCASE UNIQUE,
+
+      password_hash TEXT NOT NULL,
+
+      password_salt TEXT NOT NULL,
+
+      created_at TEXT NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+    )
+  `);
+
+  console.log("사용자 로그인 정보 테이블 확인 완료!");
+
+  // ========================================
+  // 로그인 세션 테이블
+  // ========================================
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS auth_sessions (
+
+      token_hash TEXT PRIMARY KEY,
+
+      user_id INTEGER NOT NULL,
+
+      expires_at INTEGER NOT NULL,
+
+      created_at TEXT NOT NULL
+        DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY (user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+    )
+  `);
+
+  console.log("로그인 세션 테이블 확인 완료!");
+
+  // ========================================
+  // 로그인 세션 조회 인덱스
+  // ========================================
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_auth_sessions_user
+    ON auth_sessions(user_id)
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires
+    ON auth_sessions(expires_at)
+  `);
+
+  console.log("로그인 세션 인덱스 확인 완료!");
+
+
+  // ========================================
   // 농장 소유권 컬럼 초기화
   // ========================================
 
